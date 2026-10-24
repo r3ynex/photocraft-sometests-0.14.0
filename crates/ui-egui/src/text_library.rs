@@ -22,7 +22,7 @@ use crate::PhotocraftApp;
 const GROUP: &str = "Text Library";
 const PREVIEW_ID: &str = "photocraft-text-library-style-previews";
 const CARD_H: f32 = 79.0;
-const GAP: f32 = 6.0;
+const GAP: f32 = 5.0;
 const PREVIEW_W: u32 = 144;
 const PREVIEW_H: u32 = 68;
 const PREVIEW_CACHE_SIZE: usize = 64;
@@ -221,9 +221,9 @@ fn style_texture(ctx: &egui::Context, style: &StylePreset) -> TextureHandle {
     texture
 }
 
-fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePreset>, width: f32, picked: bool) -> egui::Response {
+fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePreset>, rect: Rect, picked: bool) -> egui::Response {
     let theme = crate::theme::Tokens::get(ui.ctx());
-    let (rect, response) = ui.allocate_exact_size(vec2(width, CARD_H), Sense::click_and_drag());
+    let response = ui.interact(rect, ui.id().with(("text-library-card", tab, name)), Sense::click_and_drag());
     let fill = if picked { theme.row_selected } else if response.hovered() { theme.hover } else { theme.field };
     ui.painter().rect_filled(rect, CornerRadius::same(9), fill);
     ui.painter().rect_stroke(rect, CornerRadius::same(9), egui::Stroke::new(1.0, if picked { theme.accent } else { theme.card_border }), egui::StrokeKind::Inside);
@@ -324,45 +324,45 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             Tab::Styles => "Select a text layer with effects and click +",
         });
     }
-    let available = ui.available_width().max(1.0);
-    // Leave a few points for scrollbar so it does not feed back into width.
-    let w = ((available - 2.0 * GAP - 14.0) / 3.0).clamp(1.0, 132.0);
-    // The docking container sets available height. Keep header and trash fixed,
-    // and scroll only the grid; the splitter/float border resizes this area.
+    // Only the scroll content consumes rows. The fixed header and trash stay in place.
+    // The scrollbar is managed by ScrollArea; compute widths from its actual inner UI.
     let scroll_height = (ui.available_height() - 50.0).max(34.0);
     egui::ScrollArea::vertical()
         .id_salt(("text-library-cards", state.tab))
         .max_height(scroll_height)
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            ui.set_max_width(available);
-            // Fixed three-card rows: egui::Grid can stretch its column widths,
-            // introducing unwanted space between cards as the dock grows.
+            let content_width = ui.available_width().max(1.0);
+            let card_width = ((content_width - 2.0 * GAP) / 3.0).max(0.0);
+            ui.set_max_width(content_width);
             ui.spacing_mut().item_spacing.y = GAP;
+            // Allocate ONE row as a single layout item, then interact with three
+            // sub-rectangles. This avoids egui::Grid's column sizing and also
+            // avoids ui.horizontal's content-driven minimum widths/overlaps.
             for row in names.chunks(3) {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = GAP;
-                    for name in row {
-                        let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
-                        let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
-                        let response = paint_card(ui, state.tab, name, style, w, selected);
-                        if response.clicked() {
-                            state.selected = Some((state.tab, name.clone()));
-                            let result = apply_card(app, state.tab, name, &styles);
-                            message(app, result);
-                        }
-                        if response.drag_started() {
-                            state.dragged = Some((state.tab, name.clone()));
-                        }
-                        response.context_menu(|ui| {
-                            if ui.button("Remove from library").clicked() {
-                                let result = remove_card(app, state.tab, name);
-                                message(app, result);
-                                ui.close();
-                            }
-                        });
+                let (row_rect, _) = ui.allocate_exact_size(vec2(content_width, CARD_H), Sense::hover());
+                for (column, name) in row.iter().enumerate() {
+                    let x = row_rect.left() + (column as f32) * (card_width + GAP);
+                    let card_rect = Rect::from_min_size(pos2(x, row_rect.top()), vec2(card_width, CARD_H));
+                    let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
+                    let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
+                    let response = paint_card(ui, state.tab, name, style, card_rect, selected);
+                    if response.clicked() {
+                        state.selected = Some((state.tab, name.clone()));
+                        let result = apply_card(app, state.tab, name, &styles);
+                        message(app, result);
                     }
-                });
+                    if response.drag_started() {
+                        state.dragged = Some((state.tab, name.clone()));
+                    }
+                    response.context_menu(|ui| {
+                        if ui.button("Remove from library").clicked() {
+                            let result = remove_card(app, state.tab, name);
+                            message(app, result);
+                            ui.close();
+                        }
+                    });
+                }
             }
         });
 
@@ -397,8 +397,9 @@ mod library_layout_tests {
     #[test]
     fn grid_width_is_bounded_at_common_dock_sizes() {
         for available in [220.0, 260.0, 290.0, 350.0, 800.0] {
-            let w = ((available - 2.0 * GAP - 14.0) / 3.0_f32).clamp(1.0, 132.0);
-            assert!(3.0 * w + 2.0 * GAP <= available);
+            let w = (available - 2.0 * GAP) / 3.0;
+            assert!(((3.0 * w + 2.0 * GAP) - available).abs() < 0.001);
+            assert!(w > 0.0);
         }
     }
 }
