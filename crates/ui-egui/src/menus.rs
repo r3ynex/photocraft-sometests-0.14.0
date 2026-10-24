@@ -135,6 +135,9 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         return r;
     }
     // Character/Paragraph Styles, Glyphs, Edit › Check Spelling dialog.
+    if let Some(r) = crate::text_library::menu(app, id, &params) {
+        return r;
+    }
     if let Some(r) = crate::type_panels_ui::menu(app, id, &params) {
         return r;
     }
@@ -714,7 +717,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
     if crate::analysis_ui::handles(id) {
         return true;
     }
-    if crate::preset_panels::handles(id) || crate::type_panels_ui::handles(id) || crate::timeline_ui::handles(id) {
+    if crate::text_library::handles(id) || crate::preset_panels::handles(id) || crate::type_panels_ui::handles(id) || crate::timeline_ui::handles(id) {
         return true;
     }
     if let Some(e) = crate::view_cmds::is_enabled(app, id) {
@@ -808,6 +811,9 @@ fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
         return Some(c);
     }
     if let Some(c) = crate::timeline_ui::checked(app, id) {
+        return Some(c);
+    }
+    if let Some(c) = crate::text_library::checked(app, id) {
         return Some(c);
     }
     if let Some(c) = crate::type_panels_ui::checked(app, id) {
@@ -933,6 +939,7 @@ pub fn is_live(id: &str) -> bool {
         || crate::workspace_ui::handles(id)
         || crate::preset_panels::handles(id)
         || crate::type_panels_ui::handles(id)
+        || crate::text_library::handles(id)
         || crate::timeline_ui::handles(id)
 }
 

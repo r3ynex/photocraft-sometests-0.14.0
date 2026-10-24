@@ -245,6 +245,7 @@ pub mod transform_tex;
 pub mod transform_tool;
 mod type_font_preview;
 pub mod type_panels_ui;
+pub mod text_library;
 pub mod type_tool;
 mod type_transform;
 pub mod updates_ui;
@@ -2474,6 +2475,7 @@ impl eframe::App for PhotocraftApp {
         preset_panels::windows(self, &ctx);
         gradient_ui::editor_window(self, &ctx);
         type_panels_ui::windows(self, &ctx);
+        text_library::window(self, &ctx);
         analysis_ui::windows(self, &ctx);
         timeline_ui::windows(self, &ctx);
         workspace_ui::windows(self, &ctx);

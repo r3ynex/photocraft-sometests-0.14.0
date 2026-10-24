@@ -1045,6 +1045,8 @@ pub struct Preferences {
     pub toolbar: ToolbarCustomization,
     /// Edit › Check Spelling: words added to the dictionary ("Add").
     pub user_dictionary: Vec<String>,
+    /// Text Library: favourite installed font families, shared between documents.
+    pub text_library_fonts: Vec<String>,
     /// Window › Workspace › New Workspace…: saved layouts by name (JSON owned by the shell).
     pub workspaces: BTreeMap<String, Value>,
     /// Window › Workspace › Lock Workspace: panels can't be moved.

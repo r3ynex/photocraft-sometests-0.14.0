@@ -1,0 +1,70 @@
+name: Text Library Windows Portable
+
+on:
+  push:
+    branches:
+      - feature/text-library-v0151
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: text-library-portable-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-portable:
+    name: Build Windows x64 portable
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+    steps:
+      - name: Checkout PhotoCraft with Text Library
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust (minimum 1.95)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check UI Rust code
+        shell: pwsh
+        run: cargo check --locked -p photocraft-ui-egui
+
+      - name: Compile portable release executable
+        shell: pwsh
+        run: cargo build --release --locked -p photocraft
+
+      - name: Assemble portable ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = 'target/release/photocraft.exe'
+          if (!(Test-Path -LiteralPath $exe)) { throw 'Expected photocraft.exe not found' }
+          New-Item -ItemType Directory -Force -Path 'dist/PhotoCraft-Text-Library' | Out-Null
+          Copy-Item -LiteralPath $exe -Destination 'dist/PhotoCraft-Text-Library/photocraft.exe'
+          @'
+          PhotoCraft v0.15.1 + Text Library v0.1
+          Windows x64 portable (unsigned, custom build)
+          Double-click photocraft.exe to run; no installer required.
+          Open Window -> Text Library to use the panel.
+          This executable is a community fork, not an official PhotoCraft release.
+          '@ | Set-Content -Encoding UTF8 'dist/PhotoCraft-Text-Library/README.txt'
+          if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/PhotoCraft-Text-Library/' }
+          if (Test-Path -LiteralPath 'LICENSE-APACHE') { Copy-Item LICENSE-APACHE 'dist/PhotoCraft-Text-Library/' }
+          Compress-Archive -Path 'dist/PhotoCraft-Text-Library' -DestinationPath 'dist/PhotoCraft-Text-Library-win64.zip' -Force
+          Get-Item 'dist/PhotoCraft-Text-Library-win64.zip' | Select-Object Name,Length
+
+      - name: Upload Windows portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhotoCraft-Text-Library-Windows-Portable
+          path: dist/PhotoCraft-Text-Library-win64.zip
+          if-no-files-found: error
+          retention-days: 30
