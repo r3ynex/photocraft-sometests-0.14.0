@@ -334,35 +334,45 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             let content_width = ui.available_width().max(1.0);
             let card_width = ((content_width - 2.0 * GAP) / 3.0).max(0.0);
-            ui.set_max_width(content_width);
-            ui.spacing_mut().item_spacing.y = GAP;
-            // Allocate ONE row as a single layout item, then interact with three
-            // sub-rectangles. This avoids egui::Grid's column sizing and also
-            // avoids ui.horizontal's content-driven minimum widths/overlaps.
-            for row in names.chunks(3) {
-                let (row_rect, _) = ui.allocate_exact_size(vec2(content_width, CARD_H), Sense::hover());
-                for (column, name) in row.iter().enumerate() {
-                    let x = row_rect.left() + (column as f32) * (card_width + GAP);
-                    let card_rect = Rect::from_min_size(pos2(x, row_rect.top()), vec2(card_width, CARD_H));
-                    let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
-                    let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
-                    let response = paint_card(ui, state.tab, name, style, card_rect, selected);
-                    if response.clicked() {
-                        state.selected = Some((state.tab, name.clone()));
-                        let result = apply_card(app, state.tab, name, &styles);
-                        message(app, result);
-                    }
-                    if response.drag_started() {
-                        state.dragged = Some((state.tab, name.clone()));
-                    }
-                    response.context_menu(|ui| {
-                        if ui.button("Remove from library").clicked() {
-                            let result = remove_card(app, state.tab, name);
-                            message(app, result);
-                            ui.close();
-                        }
-                    });
+            let row_count = names.len().div_ceil(3);
+            let grid_height = if row_count == 0 {
+                1.0
+            } else {
+                row_count as f32 * CARD_H + (row_count - 1) as f32 * GAP
+            };
+
+            // Reserve the ENTIRE grid height at once. Individual cards use
+            // ui.interact(rect), which does not advance the layout cursor.
+            // The single reservation prevents overlapping rows and keeps
+            // ScrollArea's content height accurate in narrow docked panels.
+            let (grid_rect, _) = ui.allocate_exact_size(
+                vec2(content_width, grid_height),
+                Sense::hover(),
+            );
+            for (index, name) in names.iter().enumerate() {
+                let col = (index % 3) as f32;
+                let row = (index / 3) as f32;
+                let x = grid_rect.left() + col * (card_width + GAP);
+                let y = grid_rect.top() + row * (CARD_H + GAP);
+                let card_rect = Rect::from_min_size(pos2(x, y), vec2(card_width, CARD_H));
+                let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
+                let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
+                let response = paint_card(ui, state.tab, name, style, card_rect, selected);
+                if response.clicked() {
+                    state.selected = Some((state.tab, name.clone()));
+                    let result = apply_card(app, state.tab, name, &styles);
+                    message(app, result);
                 }
+                if response.drag_started() {
+                    state.dragged = Some((state.tab, name.clone()));
+                }
+                response.context_menu(|ui| {
+                    if ui.button("Remove from library").clicked() {
+                        let result = remove_card(app, state.tab, name);
+                        message(app, result);
+                        ui.close();
+                    }
+                });
             }
         });
 
