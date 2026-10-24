@@ -27,7 +27,7 @@ const PREVIEW_W: u32 = 144;
 const PREVIEW_H: u32 = 68;
 const PREVIEW_CACHE_SIZE: usize = 64;
 
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Tab {
     #[default]
     Fonts,
