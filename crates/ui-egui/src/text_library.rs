@@ -336,11 +336,13 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         .auto_shrink([false, false])
         .show(ui, |ui| {
             ui.set_max_width(available);
-            egui::Grid::new(("text-library-grid", state.tab))
-                .num_columns(3)
-                .spacing(vec2(GAP, GAP))
-                .show(ui, |ui| {
-                    for (i, name) in names.iter().enumerate() {
+            // Fixed three-card rows: egui::Grid can stretch its column widths,
+            // introducing unwanted space between cards as the dock grows.
+            ui.spacing_mut().item_spacing.y = GAP;
+            for row in names.chunks(3) {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = GAP;
+                    for name in row {
                         let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
                         let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
                         let response = paint_card(ui, state.tab, name, style, w, selected);
@@ -359,9 +361,9 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                                 ui.close();
                             }
                         });
-                        if i % 3 == 2 { ui.end_row(); }
                     }
                 });
+            }
         });
 
     ui.add_space(5.0);
