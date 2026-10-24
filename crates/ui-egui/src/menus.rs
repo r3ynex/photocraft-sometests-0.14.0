@@ -135,9 +135,6 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         return r;
     }
     // Character/Paragraph Styles, Glyphs, Edit › Check Spelling dialog.
-    if let Some(r) = crate::text_library::menu(app, id, &params) {
-        return r;
-    }
     if let Some(r) = crate::type_panels_ui::menu(app, id, &params) {
         return r;
     }
@@ -811,9 +808,6 @@ fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
         return Some(c);
     }
     if let Some(c) = crate::timeline_ui::checked(app, id) {
-        return Some(c);
-    }
-    if let Some(c) = crate::text_library::checked(app, id) {
         return Some(c);
     }
     if let Some(c) = crate::type_panels_ui::checked(app, id) {

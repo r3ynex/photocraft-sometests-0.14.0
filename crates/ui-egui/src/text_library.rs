@@ -4,8 +4,8 @@
 //! Styles use the engine's persistent StylePreset library, in the "Text Library" group.
 //! A style is *effects only*, never font, color, point size, alignment, or text content.
 //!
-//! Deliberately implemented as an independent floating window: it doesn't change
-//! the app's shared docking-layout invariants and can later be registered as a dock panel.
+//! Integrated into PhotoCraft's native docking system, with bounded 3-column cards
+//! and a scrollable, vertically resizable panel.
 
 use std::collections::VecDeque;
 
@@ -21,8 +21,8 @@ use crate::PhotocraftApp;
 
 const GROUP: &str = "Text Library";
 const PREVIEW_ID: &str = "photocraft-text-library-style-previews";
-const CARD_H: f32 = 84.0;
-const GAP: f32 = 7.0;
+const CARD_H: f32 = 79.0;
+const GAP: f32 = 6.0;
 const PREVIEW_W: u32 = 144;
 const PREVIEW_H: u32 = 68;
 const PREVIEW_CACHE_SIZE: usize = 64;
@@ -234,7 +234,13 @@ fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePrese
             (Tab::Fonts, _) => {
                 // Font samples are real rasterized installed fonts. The existing engine
                 // caches their textures and handles fonts without Latin glyphs.
-                crate::font_preview::paint(ui, name, preview, 15.0);
+                // The font renderer uses a 100px-wide thumbnail at 18pt. Scale
+                // down in narrow docks, and clip it within the card.
+                let size = (preview.width() * 18.0 / 104.0).clamp(8.0, 15.0);
+                ui.scope_builder(egui::UiBuilder::new().max_rect(preview), |ui| {
+                    ui.set_clip_rect(preview.intersect(ui.clip_rect()));
+                    crate::font_preview::paint(ui, name, preview, size);
+                });
             }
             (Tab::Styles, Some(st)) => {
                 let tex = style_texture(ui.ctx(), st);
@@ -251,30 +257,20 @@ fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePrese
     response.on_hover_text(format!("{name} • click to apply, drag to remove"))
 }
 
-pub fn window(app: &mut PhotocraftApp, ctx: &egui::Context) {
-    if !app.ui.text_library.open {
-        return;
-    }
+/// Contents used by the shared DockArea. The old independent floating window is gone.
+/// DockArea owns the title bar and the resize handles, so there is only one header.
+pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let mut state = std::mem::take(&mut app.ui.text_library);
-    let mut open = state.open;
-    egui::Window::new("Text Library")
-        .id(egui::Id::new("photocraft-text-library"))
-        .default_width(390.0)
-        .min_width(270.0)
-        .default_height(390.0)
-        .resizable(true)
-        .open(&mut open)
-        .show(ctx, |ui| body(app, &mut state, ui));
-    state.open = open;
+    body(app, &mut state, ui);
     app.ui.text_library = state;
 }
 
 fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
-        ui.selectable_value(&mut state.tab, Tab::Fonts, "Шрифты");
-        ui.selectable_value(&mut state.tab, Tab::Styles, "Стили");
+        ui.selectable_value(&mut state.tab, Tab::Fonts, "Fonts");
+        ui.selectable_value(&mut state.tab, Tab::Styles, "Styles");
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Добавить установленный шрифт", Tab::Styles => "Сохранить эффекты выбранного текстового слоя" }).clicked() {
+            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer" }).clicked() {
                 match state.tab {
                     Tab::Fonts => {
                         state.adding_font = !state.adding_font;
@@ -295,12 +291,12 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     if state.tab == Tab::Fonts && state.adding_font {
         let families = crate::type_tool::families();
         ui.horizontal(|ui| {
-            let width = (ui.available_width() - 92.0).max(105.0);
+            let width = (ui.available_width() - 77.0).max(20.0);
             crate::type_tool::family_picker_in(
                 ui, "text-library-font-add", &mut state.font_to_add, width,
                 &families, app.session.prefs().type_.font_preview, &[],
             );
-            if ui.button("Добавить").clicked() {
+            if ui.button("Add").clicked() {
                 let name = state.font_to_add.clone();
                 let result = add_font(app, &name);
                 if result.is_ok() {
@@ -319,21 +315,28 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         Tab::Styles => styles.iter().map(|s| s.name.clone()).collect(),
     };
 
-    // Cards are three columns, regardless of the number of entries (3 × N).
+    // No min-width growth: a fixed three-column grid must never dictate the
+    // size of its parent DockArea / floating window. A 4th font adds a row,
+    // not another column, and the font-picker popup can't widen the pane.
     if names.is_empty() {
         ui.label(match state.tab {
-            Tab::Fonts => "Нажми +, чтобы добавить первый шрифт",
-            Tab::Styles => "Выдели текстовый слой с эффектами и нажми +",
+            Tab::Fonts => "Click + to add your first font",
+            Tab::Styles => "Select a text layer with effects and click +",
         });
-        ui.add_space(8.0);
     }
-    let w = ((ui.available_width() - 2.0 * GAP) / 3.0).max(70.0);
-    let scroll_height = ui.available_height().max(180.0) - 49.0;
+    let available = ui.available_width().max(1.0);
+    // Leave a few points for scrollbar so it does not feed back into width.
+    let w = ((available - 2.0 * GAP - 14.0) / 3.0).clamp(1.0, 132.0);
+    // The docking container sets available height. Keep header and trash fixed,
+    // and scroll only the grid; the splitter/float border resizes this area.
+    let scroll_height = (ui.available_height() - 50.0).max(34.0);
     egui::ScrollArea::vertical()
-        .id_salt("text-library-cards")
-        .max_height(scroll_height.max(140.0))
+        .id_salt(("text-library-cards", state.tab))
+        .max_height(scroll_height)
+        .auto_shrink([false, false])
         .show(ui, |ui| {
-            egui::Grid::new("text-library-grid")
+            ui.set_max_width(available);
+            egui::Grid::new(("text-library-grid", state.tab))
                 .num_columns(3)
                 .spacing(vec2(GAP, GAP))
                 .show(ui, |ui| {
@@ -349,28 +352,25 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                         if response.drag_started() {
                             state.dragged = Some((state.tab, name.clone()));
                         }
-                        // Alternative removal for touch / accessibility, in addition to drag.
                         response.context_menu(|ui| {
-                            if ui.button("Убрать из библиотеки").clicked() {
+                            if ui.button("Remove from library").clicked() {
                                 let result = remove_card(app, state.tab, name);
                                 message(app, result);
                                 ui.close();
                             }
                         });
-                        if i % 3 == 2 {
-                            ui.end_row();
-                        }
+                        if i % 3 == 2 { ui.end_row(); }
                     }
                 });
         });
 
     ui.add_space(5.0);
-    let (trash, response) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 36.0), Sense::hover());
-    let hovered = state.dragged.as_ref().is_some_and(|_| response.hovered());
+    let (trash, response) = ui.allocate_exact_size(Vec2::new(ui.available_width().max(1.0), 31.0), Sense::hover());
+    let hovered = state.dragged.is_some() && response.hovered();
     let t = crate::theme::Tokens::get(ui.ctx());
     ui.painter().rect_filled(trash, CornerRadius::same(7), if hovered { t.hover } else { t.field });
     ui.painter().rect_stroke(trash, CornerRadius::same(7), egui::Stroke::new(1.0, if hovered { t.accent } else { t.card_border }), egui::StrokeKind::Inside);
-    ui.painter().text(trash.center(), egui::Align2::CENTER_CENTER, "Удалить из панели ↓", egui::FontId::proportional(11.0), t.text_dim);
+    ui.painter().text(trash.center(), egui::Align2::CENTER_CENTER, "Drag here to remove", egui::FontId::proportional(11.0), t.text_dim);
 
     // On mouse release, remove only if the pointer is within the lower trash strip.
     // Dragging outside cancels, clicking a card never removes it.
@@ -386,5 +386,17 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         }
     } else if state.dragged.is_some() && !ui.input(|i| i.pointer.any_down()) {
         state.dragged = None;
+    }
+}
+
+#[cfg(test)]
+mod library_layout_tests {
+    use super::*;
+    #[test]
+    fn grid_width_is_bounded_at_common_dock_sizes() {
+        for available in [220.0, 260.0, 290.0, 350.0, 800.0] {
+            let w = ((available - 2.0 * GAP - 14.0) / 3.0_f32).clamp(1.0, 132.0);
+            assert!(3.0 * w + 2.0 * GAP <= available);
+        }
     }
 }

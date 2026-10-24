@@ -26,6 +26,7 @@ const PANELS: &[(&str, &str, Group)] = &[
     ("channels", "Channels", Group::Layers),
     ("paths", "Paths", Group::Layers),
     ("brushes", "Brushes", Group::Brushes),
+    ("textLibrary", "Text Library", Group::Character),
 ];
 #[derive(Clone, Default)]
 struct LegacyDrag {
@@ -177,7 +178,7 @@ pub(crate) fn command(app: &mut PhotocraftApp, id: &str, params: &Value) -> Opti
         );
     }
     if let Some(panel) = id.strip_prefix("window.panel.").or_else(|| id.strip_prefix("window.toggle.")).and_then(normalize) {
-        if app.ui.docking.is_none() && panel != "brushes" {
+        if app.ui.docking.is_none() && panel != "brushes" && panel != "textLibrary" {
             return None;
         }
         let showing = app.ui.docking.as_ref().is_some_and(|layout| layout.contains(&panel.to_string()));
@@ -540,6 +541,10 @@ pub(crate) fn legacy_tab(app: &mut PhotocraftApp, ui: &mut egui::Ui, panel: &str
 }
 
 fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: &str) {
+    if id == "textLibrary" {
+        crate::text_library::panel(app, ui);
+        return;
+    }
     let Some((_, label, group)) = PANELS.iter().find(|p| p.0 == id) else { return };
     let pro = crate::theme::Tokens::get(ui.ctx()).pro;
     let Some(tab) = group.tabs(pro).iter().position(|name| name == label) else { return };

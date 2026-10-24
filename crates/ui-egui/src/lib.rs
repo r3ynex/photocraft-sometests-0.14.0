@@ -2475,7 +2475,6 @@ impl eframe::App for PhotocraftApp {
         preset_panels::windows(self, &ctx);
         gradient_ui::editor_window(self, &ctx);
         type_panels_ui::windows(self, &ctx);
-        text_library::window(self, &ctx);
         analysis_ui::windows(self, &ctx);
         timeline_ui::windows(self, &ctx);
         workspace_ui::windows(self, &ctx);

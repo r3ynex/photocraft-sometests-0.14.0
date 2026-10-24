@@ -3,7 +3,7 @@ name: Text Library Windows Portable
 on:
   push:
     branches:
-      - feature/text-library-v0151
+      - feature/text-library-v02
   workflow_dispatch:
 
 permissions:
@@ -50,7 +50,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path 'dist/PhotoCraft-Text-Library' | Out-Null
           Copy-Item -LiteralPath $exe -Destination 'dist/PhotoCraft-Text-Library/photocraft.exe'
           @'
-          PhotoCraft v0.15.1 + Text Library v0.1
+          PhotoCraft v0.15.1 + Text Library v0.2
           Windows x64 portable (unsigned, custom build)
           Double-click photocraft.exe to run; no installer required.
           Open Window -> Text Library to use the panel.
