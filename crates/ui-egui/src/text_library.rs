@@ -41,6 +41,8 @@ pub struct State {
     pub tab: Tab,
     pub adding_font: bool,
     pub font_to_add: String,
+    pub creating_group: bool,
+    pub new_group_name: String,
     pub dragged: Option<(Tab, String)>,
     pub selected: Option<(Tab, String)>,
 }
@@ -74,21 +76,123 @@ fn message(app: &mut PhotocraftApp, result: Result<(), String>) {
     }
 }
 
-fn add_font(app: &mut PhotocraftApp, family: &str) -> Result<(), String> {
+const DEFAULT_FONT_GROUP: &str = "Default";
+
+fn active_group(app: &PhotocraftApp) -> String {
+    let prefs = app.session.prefs();
+    let group = prefs.text_library_active_group.as_str();
+    if group.is_empty() || group == DEFAULT_FONT_GROUP {
+        return DEFAULT_FONT_GROUP.to_string();
+    }
+    if prefs.text_library_groups.iter().any(|g| g.name == group) {
+        group.to_string()
+    } else {
+        DEFAULT_FONT_GROUP.to_string()
+    }
+}
+
+fn font_groups(app: &PhotocraftApp) -> Vec<String> {
+    std::iter::once(DEFAULT_FONT_GROUP.to_string())
+        .chain(app.session.prefs().text_library_groups.iter().map(|g| g.name.clone()))
+        .collect()
+}
+
+fn fonts_in_group(app: &PhotocraftApp, name: &str) -> Vec<String> {
+    let p = app.session.prefs();
+    if name == DEFAULT_FONT_GROUP {
+        return p.text_library_fonts.clone();
+    }
+    p.text_library_groups.iter().find(|g| g.name == name)
+        .map_or_else(Vec::new, |g| g.fonts.clone())
+}
+
+pub(crate) fn add_font_to_group(app: &mut PhotocraftApp, family: &str, name: &str) -> Result<(), String> {
     if !crate::type_tool::families().iter().any(|f| f == family) {
         return Err(format!("Font is not installed: {family}"));
     }
+    if name != DEFAULT_FONT_GROUP && !app.session.prefs().text_library_groups.iter().any(|g| g.name == name) {
+        return Err(format!("Font group does not exist: {name}"));
+    }
     app.session.prefs.edit(|p| {
-        if !p.text_library_fonts.iter().any(|f| f == family) {
-            p.text_library_fonts.push(family.to_string());
+        let fonts = if name == DEFAULT_FONT_GROUP {
+            &mut p.text_library_fonts
+        } else {
+            &mut p.text_library_groups.iter_mut().find(|g| g.name == name).expect("validated group").fonts
+        };
+        if !fonts.iter().any(|f| f == family) {
+            fonts.push(family.to_string());
         }
     });
     Ok(())
 }
 
+fn add_font(app: &mut PhotocraftApp, family: &str) -> Result<(), String> {
+    let group = active_group(app);
+    add_font_to_group(app, family, &group)
+}
+
 fn delete_font(app: &mut PhotocraftApp, family: &str) -> Result<(), String> {
-    app.session.prefs.edit(|p| p.text_library_fonts.retain(|f| f != family));
+    let group = active_group(app);
+    app.session.prefs.edit(|p| {
+        if group == DEFAULT_FONT_GROUP {
+            p.text_library_fonts.retain(|f| f != family);
+        } else if let Some(g) = p.text_library_groups.iter_mut().find(|g| g.name == group) {
+            g.fonts.retain(|f| f != family);
+        }
+    });
     Ok(())
+}
+
+fn create_group(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("Enter a group name".to_string());
+    }
+    if name.chars().count() > 64 {
+        return Err("Group names may contain up to 64 characters".to_string());
+    }
+    if font_groups(app).iter().any(|g| g.eq_ignore_ascii_case(name)) {
+        return Err(format!("A group named {name} already exists"));
+    }
+    app.session.prefs.edit(|p| {
+        p.text_library_groups.push(photocraft_engine::prefs::TextLibraryFontGroup {
+            name: name.to_string(), fonts: Vec::new(),
+        });
+        p.text_library_active_group = name.to_string();
+    });
+    Ok(())
+}
+
+/// Star beside the font picker in the Type options bar and Character/Properties panels.
+/// Shift-click adds immediately to the active group; a normal click opens a group popover.
+pub(crate) fn font_star(app: &mut PhotocraftApp, ui: &mut egui::Ui, family: &str) {
+    let active = active_group(app);
+    let in_active = fonts_in_group(app, &active).iter().any(|f| f == family);
+    let label = if in_active { "★" } else { "☆" };
+    let shift = ui.input(|i| i.modifiers.shift);
+    let button = ui.add_sized([22.0, 22.0], egui::Button::new(label))
+        .on_hover_text("Add font to a group (Shift-click: active group)");
+    if shift && button.clicked() {
+        let result = add_font_to_group(app, family, &active);
+        message(app, result);
+    }
+    // Do not open a popup for Shift-click: that gesture is the quick-add shortcut.
+    if !shift {
+        egui::Popup::menu(&button).show(|ui| {
+            ui.set_min_width(175.0);
+            ui.label("Add font to group");
+            ui.separator();
+            for name in font_groups(app) {
+                let present = fonts_in_group(app, &name).iter().any(|f| f == family);
+                let label = if present { format!("✓ {name}") } else { name.clone() };
+                if ui.button(label).clicked() {
+                    let result = add_font_to_group(app, family, &name);
+                    message(app, result);
+                    ui.close();
+                }
+            }
+        });
+    }
 }
 
 fn type_target(app: &PhotocraftApp) -> Result<u64, String> {
@@ -288,6 +392,43 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     });
     ui.separator();
 
+    if state.tab == Tab::Fonts {
+        let mut selected_group = active_group(app);
+        ui.horizontal(|ui| {
+            egui::ComboBox::from_id_salt("text-library-font-groups")
+                .selected_text(selected_group.clone())
+                .width((ui.available_width() - 95.0).clamp(100.0, 250.0))
+                .show_ui(ui, |ui| {
+                    for group in font_groups(app) {
+                        ui.selectable_value(&mut selected_group, group.clone(), group);
+                    }
+                });
+            if ui.small_button("+ Group").on_hover_text("Create a new font group").clicked() {
+                state.creating_group = !state.creating_group;
+            }
+        });
+        if selected_group != active_group(app) {
+            app.session.prefs.edit(|p| p.text_library_active_group = selected_group);
+            state.selected = None;
+        }
+        if state.creating_group {
+            ui.horizontal(|ui| {
+                ui.add(egui::TextEdit::singleline(&mut state.new_group_name)
+                    .hint_text("Group name").desired_width(170.0));
+                if ui.small_button("Create").clicked() {
+                    let result = create_group(app, &state.new_group_name);
+                    if result.is_ok() {
+                        state.creating_group = false;
+                        state.new_group_name.clear();
+                        state.selected = None;
+                    }
+                    message(app, result);
+                }
+            });
+        }
+        ui.separator();
+    }
+
     if state.tab == Tab::Fonts && state.adding_font {
         let families = crate::type_tool::families();
         ui.horizontal(|ui| {
@@ -308,7 +449,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         ui.separator();
     }
 
-    let fonts = app.session.prefs().text_library_fonts.clone();
+    let fonts = fonts_in_group(app, &active_group(app));
     let styles = library_styles(app);
     let names: Vec<String> = match state.tab {
         Tab::Fonts => fonts,
@@ -320,7 +461,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     // not another column, and the font-picker popup can't widen the pane.
     if names.is_empty() {
         ui.label(match state.tab {
-            Tab::Fonts => "Click + to add your first font",
+            Tab::Fonts => "Click + to add a font to this group",
             Tab::Styles => "Select a text layer with effects and click +",
         });
     }
@@ -367,7 +508,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                     state.dragged = Some((state.tab, name.clone()));
                 }
                 response.context_menu(|ui| {
-                    if ui.button("Remove from library").clicked() {
+                    if ui.button("Remove from group").clicked() {
                         let result = remove_card(app, state.tab, name);
                         message(app, result);
                         ui.close();

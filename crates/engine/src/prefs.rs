@@ -1041,6 +1041,14 @@ impl LayerMaskOverlay {
     }
 }
 
+/// Named group of favourite typefaces in the Text Library panel.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TextLibraryFontGroup {
+    pub name: String,
+    pub fonts: Vec<String>,
+}
+
 /// All preferences. JSON keys are the `edit.preferences.<section>` ids.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -1080,8 +1088,13 @@ pub struct Preferences {
     pub toolbar: ToolbarCustomization,
     /// Edit › Check Spelling: words added to the dictionary ("Add").
     pub user_dictionary: Vec<String>,
-    /// Text Library: favourite installed font families, shared between documents.
+    /// Original favourite fonts are retained as the built-in Default group.
+    /// Older preferences continue to load without migration or lost favourites.
     pub text_library_fonts: Vec<String>,
+    /// User-defined groups (each maintains a separate font list).
+    pub text_library_groups: Vec<TextLibraryFontGroup>,
+    /// Last active font group; empty or "Default" selects the built-in group.
+    pub text_library_active_group: String,
     /// Window › Workspace › New Workspace…: saved layouts by name (JSON owned by the shell).
     pub workspaces: BTreeMap<String, Value>,
     /// Window › Workspace › Lock Workspace: panels can't be moved.

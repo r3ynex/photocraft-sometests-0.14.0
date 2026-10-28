@@ -3284,6 +3284,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             app.ui.tool_options.type_style = style.clone();
             apply(app, ui.ctx(), json!({"font": fam}));
         }
+        crate::text_library::font_star(app, ui, &fam);
         let opts: Vec<(String, String)> = styles(&fam).into_iter().map(|s| (s.clone(), style_label(&s))).collect();
         let opts_ref: Vec<(String, &str)> = opts.iter().map(|(a, b)| (a.clone(), b.as_str())).collect();
         if crate::widgets::dropdown(ui, "type-style", tl!("Style"), &mut style, &opts_ref, 110.0) {
@@ -3795,10 +3796,13 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
         let mut ready = true;
         row(ui, &mut |ui| {
             ready = fonts_ready(ui, full);
-            if ready && font_picker(ui, &mut fam, full, app.session.prefs().type_.font_preview, &app.ui.recent_fonts) {
+            if ready && font_picker(ui, &mut fam, (full - 30.0).max(75.0), app.session.prefs().type_.font_preview, &app.ui.recent_fonts) {
                 app.note_recent_font(&fam);
                 app.ui.tool_options.type_font = fam.clone();
                 apply(app, ui.ctx(), json!({"font": fam}));
+            }
+            if ready {
+                crate::text_library::font_star(app, ui, &fam);
             }
         });
         row(ui, &mut |ui| {
