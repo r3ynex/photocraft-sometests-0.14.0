@@ -32,12 +32,14 @@ pub enum Tab {
     #[default]
     Fonts,
     Styles,
+    Effects,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct State {
     pub open: bool,
+    pub effect: EffectSettings,
     pub tab: Tab,
     pub adding_font: bool,
     pub font_to_add: String,
@@ -45,6 +47,53 @@ pub struct State {
     pub new_group_name: String,
     pub dragged: Option<(Tab, String)>,
     pub selected: Option<(Tab, String)>,
+}
+
+/// Parameters of the editable character-run effects. Stored with the dock UI state.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EffectMode {
+    #[default]
+    Random,
+    Taper,
+    Alternate,
+}
+
+impl EffectMode {
+    fn key(self) -> &'static str {
+        match self {
+            Self::Random => "random",
+            Self::Taper => "taper",
+            Self::Alternate => "alternate",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EffectSettings {
+    pub mode: EffectMode,
+    pub min_percent: f32,
+    pub max_percent: f32,
+    pub min_slant: f32,
+    pub max_slant: f32,
+    pub end_size: f32,
+    pub reverse: bool,
+    pub seed: u64,
+}
+
+impl Default for EffectSettings {
+    fn default() -> Self {
+        Self {
+            mode: EffectMode::Random,
+            min_percent: 75.0,
+            max_percent: 125.0,
+            min_slant: -12.0,
+            max_slant: 12.0,
+            end_size: 8.0,
+            reverse: false,
+            seed: 1,
+        }
+    }
 }
 
 #[derive(Clone, Default)]
@@ -216,6 +265,119 @@ fn apply_font(app: &mut PhotocraftApp, family: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn run_text_effect(app: &mut PhotocraftApp, effect: &EffectSettings) -> Result<(), String> {
+    let props = json!({
+        "mode": effect.mode.key(),
+        "minPercent": effect.min_percent,
+        "maxPercent": effect.max_percent,
+        "minSlant": effect.min_slant,
+        "maxSlant": effect.max_slant,
+        "endSize": effect.end_size,
+        "reverse": effect.reverse,
+        "seed": effect.seed,
+    });
+    let mut p = if let Some(target) = crate::type_tool::with_target(app, props.clone()) {
+        target
+    } else {
+        let id = type_target(app)?;
+        let mut p = props;
+        p["layer"] = json!(id);
+        p
+    };
+    // A caret without a selection means the whole layer, not a zero-character effect.
+    if p.get("range").and_then(Value::as_array).is_some_and(|r| r.len() == 2 && r[0] == r[1]) {
+        if let Some(obj) = p.as_object_mut() {
+            obj.remove("range");
+        }
+    }
+    // Applying a text effect is its own undo step, not part of the current typing gesture.
+    if let Some(obj) = p.as_object_mut() {
+        obj.remove("coalesce");
+    }
+    app.run("type.textEffect", p)?;
+    app.ui.status = "Text effect applied. The type layer remains editable.".into();
+    Ok(())
+}
+
+fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut egui::Ui) {
+    egui::ScrollArea::vertical()
+        .id_salt("text-library-character-effects")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            ui.label("Character effects");
+            ui.weak("Select characters with the Type tool or select a text layer. No rasterizing or smart objects.");
+            ui.add_space(6.0);
+
+            egui::ComboBox::from_id_salt("text-library-effect-mode")
+                .selected_text(match settings.mode {
+                    EffectMode::Random => "Random",
+                    EffectMode::Taper => "Decrease",
+                    EffectMode::Alternate => "Alternating",
+                })
+                .width(ui.available_width().min(220.0).max(80.0))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut settings.mode, EffectMode::Random, "Random");
+                    ui.selectable_value(&mut settings.mode, EffectMode::Taper, "Decrease");
+                    ui.selectable_value(&mut settings.mode, EffectMode::Alternate, "Alternating");
+                });
+            ui.add_space(8.0);
+
+            match settings.mode {
+                EffectMode::Random | EffectMode::Alternate => {
+                    ui.label("Letter size (% of its current size)");
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label("Min");
+                        ui.add(egui::DragValue::new(&mut settings.min_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
+                        ui.label("Max");
+                        ui.add(egui::DragValue::new(&mut settings.max_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
+                    });
+                    ui.add_space(5.0);
+                    ui.label("Letter slant (degrees)");
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label("Min");
+                        ui.add(egui::DragValue::new(&mut settings.min_slant).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                        ui.label("Max");
+                        ui.add(egui::DragValue::new(&mut settings.max_slant).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                    });
+                    if settings.mode == EffectMode::Random {
+                        ui.add_space(5.0);
+                        ui.horizontal(|ui| {
+                            ui.label(format!("Variation #{}", settings.seed));
+                            if ui.small_button("New seed").on_hover_text("Generate a different deterministic random pattern").clicked() {
+                                settings.seed = settings.seed.wrapping_add(1);
+                            }
+                        });
+                    } else {
+                        ui.weak("Alternates large/small and left/right slant for each character.");
+                    }
+                }
+                EffectMode::Taper => {
+                    ui.label("Last letter size");
+                    ui.horizontal(|ui| {
+                        ui.add(egui::DragValue::new(&mut settings.end_size).range(0.1..=1296.0).speed(0.5).suffix(" pt"));
+                        ui.checkbox(&mut settings.reverse, "Reverse");
+                    });
+                    ui.weak("Normal: start at the first letter's size and shrink to this limit. Reverse: grow from the limit to the original size.");
+                }
+            }
+            if settings.min_percent > settings.max_percent || settings.min_slant > settings.max_slant {
+                ui.colored_label(egui::Color32::from_rgb(240, 130, 90), "Minimum must not exceed maximum.");
+            }
+            ui.add_space(10.0);
+            let enabled = type_target(app).is_ok()
+                && settings.min_percent <= settings.max_percent
+                && settings.min_slant <= settings.max_slant;
+            if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
+                message(app, run_text_effect(app, settings));
+            }
+            if !enabled && type_target(app).is_err() {
+                ui.weak("Select an editable text layer to enable Apply.");
+            }
+            ui.add_space(8.0);
+            ui.weak("Each Apply changes character formatting and can be undone with Ctrl+Z. Applying again uses the currently styled text as its starting point.");
+        });
+}
+
 fn library_styles(app: &PhotocraftApp) -> Vec<StylePreset> {
     app.session.presets.styles.iter().find(|g| g.name == GROUP).map_or_else(Vec::new, |g| g.items.clone())
 }
@@ -260,6 +422,7 @@ fn delete_style(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
 fn apply_card(app: &mut PhotocraftApp, tab: Tab, name: &str, styles: &[StylePreset]) -> Result<(), String> {
     match tab {
         Tab::Fonts => apply_font(app, name),
+        Tab::Effects => Err("Use Apply on the Effects tab".into()),
         Tab::Styles => {
             let style = styles.iter().find(|s| s.name == name).ok_or("Style is no longer available")?;
             apply_style(app, style)
@@ -271,6 +434,7 @@ fn remove_card(app: &mut PhotocraftApp, tab: Tab, name: &str) -> Result<(), Stri
     match tab {
         Tab::Fonts => delete_font(app, name),
         Tab::Styles => delete_style(app, name),
+        Tab::Effects => Err("There is no effects library card to delete".into()),
     }
 }
 
@@ -373,8 +537,10 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.selectable_value(&mut state.tab, Tab::Fonts, "Fonts");
         ui.selectable_value(&mut state.tab, Tab::Styles, "Styles");
+        ui.selectable_value(&mut state.tab, Tab::Effects, "Effects");
+        if state.tab != Tab::Effects {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer" }).clicked() {
+            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer", Tab::Effects => "Editable text effects" }).clicked() {
                 match state.tab {
                     Tab::Fonts => {
                         state.adding_font = !state.adding_font;
@@ -386,11 +552,17 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                         let result = save_style(app);
                         message(app, result);
                     },
+                    Tab::Effects => {},
                 }
             }
         });
+        }
     });
     ui.separator();
+    if state.tab == Tab::Effects {
+        effect_panel(app, &mut state.effect, ui);
+        return;
+    }
 
     if state.tab == Tab::Fonts {
         let mut selected_group = active_group(app);
@@ -454,6 +626,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     let names: Vec<String> = match state.tab {
         Tab::Fonts => fonts,
         Tab::Styles => styles.iter().map(|s| s.name.clone()).collect(),
+        Tab::Effects => Vec::new(),
     };
 
     // No min-width growth: a fixed three-column grid must never dictate the
@@ -463,6 +636,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         ui.label(match state.tab {
             Tab::Fonts => "Click + to add a font to this group",
             Tab::Styles => "Select a text layer with effects and click +",
+            Tab::Effects => "Choose an effect and click Apply",
         });
     }
     // Only the scroll content consumes rows. The fixed header and trash stay in place.
