@@ -269,7 +269,7 @@ fn glyph_xform(layout: &TextLayout, g: &PlacedGlyph, face_skew_deg: f32) -> Xfor
     let Some(st) = layout.styles.get(g.style as usize) else { return Xform([1.0, 0.0, 0.0, -1.0, g.x as f64, g.y as f64]) };
     let hs = if st.horizontal_scale > 0.0 { st.horizontal_scale } else { 1.0 } as f64;
     let vs = if st.vertical_scale > 0.0 { st.vertical_scale } else { 1.0 } as f64;
-    let skew_deg = if st.faux_italic { FAUX_ITALIC_DEG } else { 0.0 } + face_skew_deg;
+    let skew_deg = (if st.faux_italic { FAUX_ITALIC_DEG } else { 0.0 }) + face_skew_deg + st.slant_deg.clamp(-30.0, 30.0);
     let skew = (skew_deg as f64).to_radians().tan() * vs;
     let shift = (st.baseline_shift_pt * layout.px_per_pt) as f64;
     let (x, y) = (g.x as f64, g.y as f64);
