@@ -142,7 +142,7 @@ fn apply(t: &mut TextLayer, (start, end): (usize, usize), o: Options) {
 }
 
 fn target_available(s: &Session) -> std::result::Result<(), String> {
-    crate::type_cmds::has_format_target(s)
+    s.active().map(|_| ()).ok_or_else(|| "no document open".into())
 }
 
 pub fn specs() -> Vec<CommandSpec> {
