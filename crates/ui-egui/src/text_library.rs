@@ -74,8 +74,8 @@ pub struct EffectSettings {
     pub mode: EffectMode,
     pub min_percent: f32,
     pub max_percent: f32,
-    pub min_slant: f32,
-    pub max_slant: f32,
+    pub min_rotation: f32,
+    pub max_rotation: f32,
     pub end_size: f32,
     pub reverse: bool,
     pub seed: u64,
@@ -87,8 +87,8 @@ impl Default for EffectSettings {
             mode: EffectMode::Random,
             min_percent: 75.0,
             max_percent: 125.0,
-            min_slant: -12.0,
-            max_slant: 12.0,
+            min_rotation: -12.0,
+            max_rotation: 12.0,
             end_size: 8.0,
             reverse: false,
             seed: 1,
@@ -270,8 +270,8 @@ fn run_text_effect(app: &mut PhotocraftApp, effect: &EffectSettings) -> Result<(
         "mode": effect.mode.key(),
         "minPercent": effect.min_percent,
         "maxPercent": effect.max_percent,
-        "minSlant": effect.min_slant,
-        "maxSlant": effect.max_slant,
+        "minRotation": effect.min_rotation,
+        "maxRotation": effect.max_rotation,
         "endSize": effect.end_size,
         "reverse": effect.reverse,
         "seed": effect.seed,
@@ -332,12 +332,12 @@ fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut
                         ui.add(egui::DragValue::new(&mut settings.max_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
                     });
                     ui.add_space(5.0);
-                    ui.label("Letter slant (degrees)");
+                    ui.label("Letter rotation (degrees)");
                     ui.horizontal_wrapped(|ui| {
                         ui.label("Min");
-                        ui.add(egui::DragValue::new(&mut settings.min_slant).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                        ui.add(egui::DragValue::new(&mut settings.min_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
                         ui.label("Max");
-                        ui.add(egui::DragValue::new(&mut settings.max_slant).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                        ui.add(egui::DragValue::new(&mut settings.max_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
                     });
                     if settings.mode == EffectMode::Random {
                         ui.add_space(5.0);
@@ -348,7 +348,7 @@ fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut
                             }
                         });
                     } else {
-                        ui.weak("Alternates large/small and left/right slant for each character.");
+                        ui.weak("Alternates large/small and left/right rotation for each character.");
                     }
                 }
                 EffectMode::Taper => {
@@ -360,13 +360,13 @@ fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut
                     ui.weak("Normal: start at the first letter's size and shrink to this limit. Reverse: grow from the limit to the original size.");
                 }
             }
-            if settings.min_percent > settings.max_percent || settings.min_slant > settings.max_slant {
+            if settings.min_percent > settings.max_percent || settings.min_rotation > settings.max_rotation {
                 ui.colored_label(egui::Color32::from_rgb(240, 130, 90), "Minimum must not exceed maximum.");
             }
             ui.add_space(10.0);
             let enabled = type_target(app).is_ok()
                 && settings.min_percent <= settings.max_percent
-                && settings.min_slant <= settings.max_slant;
+                && settings.min_rotation <= settings.max_rotation;
             if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
                 let result = run_text_effect(app, settings);
                 message(app, result);
