@@ -83,9 +83,9 @@ pub struct CharStyle {
     pub strikethrough: bool,
     pub faux_bold: bool,
     pub faux_italic: bool,
-    /// Additional per-character editable slant (degrees); PhotoCraft-native style attribute.
+    /// Rotation of individual editable glyphs in degrees; PhotoCraft-native style attribute.
     #[serde(default)]
-    pub slant_deg: f32,
+    pub rotation_deg: f32,
     /// Automatic (pair) kerning mode.
     pub kerning: Kerning,
     /// Manual kerning in 1/1000 em between this character and the next one (Photoshop stores it
@@ -129,7 +129,7 @@ impl Default for CharStyle {
             strikethrough: false,
             faux_bold: false,
             faux_italic: false,
-            slant_deg: 0.0,
+            rotation_deg: 0.0,
             kerning: Kerning::Metrics,
             kern: 0.0,
             caps: Caps::Normal,
