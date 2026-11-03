@@ -368,7 +368,8 @@ fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut
                 && settings.min_percent <= settings.max_percent
                 && settings.min_slant <= settings.max_slant;
             if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
-                message(app, run_text_effect(app, settings));
+                let result = run_text_effect(app, settings);
+                message(app, result);
             }
             if !enabled && type_target(app).is_err() {
                 ui.weak("Select an editable text layer to enable Apply.");
