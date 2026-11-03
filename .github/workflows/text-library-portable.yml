@@ -1,9 +1,10 @@
-name: Text Library Windows Portable
+name: Text Library + Editable Text Effects Windows Portable
 
 on:
   push:
     branches:
       - feature/text-library-v02
+      - feature/text-effects-editable
   workflow_dispatch:
 
 permissions:
@@ -50,10 +51,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path 'dist/PhotoCraft-Text-Library' | Out-Null
           Copy-Item -LiteralPath $exe -Destination 'dist/PhotoCraft-Text-Library/photocraft.exe'
           @'
-          PhotoCraft v0.15.1 + Text Library v0.2
+          PhotoCraft v0.15.1 + Text Library v0.2 + editable text effects
           Windows x64 portable (unsigned, custom build)
           Double-click photocraft.exe to run; no installer required.
-          Open Window -> Text Library to use the panel.
+          Open Window -> Text Library -> Effects to apply editable character effects.
           This executable is a community fork, not an official PhotoCraft release.
           '@ | Set-Content -Encoding UTF8 'dist/PhotoCraft-Text-Library/README.txt'
           if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/PhotoCraft-Text-Library/' }
