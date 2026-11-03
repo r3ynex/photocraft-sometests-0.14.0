@@ -22,8 +22,8 @@ struct Options {
     mode: Mode,
     min_percent: f32,
     max_percent: f32,
-    min_slant: f32,
-    max_slant: f32,
+    min_rotation: f32,
+    max_rotation: f32,
     end_size: f32,
     reverse: bool,
     seed: u64,
@@ -53,10 +53,10 @@ fn options(p: &Value) -> Result<Options> {
     };
     let min_percent = number(p, "minPercent", 70.0, 10.0, 400.0)?;
     let max_percent = number(p, "maxPercent", 130.0, 10.0, 400.0)?;
-    let min_slant = number(p, "minSlant", -12.0, -30.0, 30.0)?;
-    let max_slant = number(p, "maxSlant", 12.0, -30.0, 30.0)?;
+    let min_rotation = number(p, "minRotation", -12.0, -30.0, 30.0)?;
+    let max_rotation = number(p, "maxRotation", 12.0, -30.0, 30.0)?;
     let end_size = number(p, "endSize", 8.0, TYPE_SIZE_MIN_PT as f32, TYPE_SIZE_MAX_PT as f32)?;
-    if min_percent > max_percent || min_slant > max_slant {
+    if min_percent > max_percent || min_rotation > max_rotation {
         return Err(invalid("minimum must not exceed maximum"));
     }
     let reverse = match p.get("reverse") {
@@ -67,11 +67,11 @@ fn options(p: &Value) -> Result<Options> {
         Some(v) => v.as_u64().ok_or_else(|| invalid("seed must be a nonnegative integer"))?,
         None => 1,
     };
-    Ok(Options { mode, min_percent, max_percent, min_slant, max_slant, end_size, reverse, seed })
+    Ok(Options { mode, min_percent, max_percent, min_rotation, max_rotation, end_size, reverse, seed })
 }
 
 /// SplitMix64: predictable across systems and repeatable given the same seed.
-/// Separate lanes avoid accidentally coupling random size and random slant.
+/// Separate lanes avoid accidentally coupling random size and random rotation.
 fn unit(seed: u64, index: usize, lane: u64) -> f32 {
     let mut z = seed.wrapping_add((index as u64).wrapping_mul(0x9e3779b97f4a7c15)).wrapping_add(lane.wrapping_mul(0x94d049bb133111eb));
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
@@ -114,7 +114,7 @@ fn apply(t: &mut TextLayer, (start, end): (usize, usize), o: Options) {
                 Mode::Random => {
                     let pct = lerp(o.min_percent, o.max_percent, unit(o.seed, nth, 0));
                     style.size_pt = (style.size_pt * pct / 100.0).clamp(TYPE_SIZE_MIN_PT as f32, TYPE_SIZE_MAX_PT as f32);
-                    style.slant_deg = lerp(o.min_slant, o.max_slant, unit(o.seed, nth, 1));
+                    style.rotation_deg = lerp(o.min_rotation, o.max_rotation, unit(o.seed, nth, 1));
                 }
                 Mode::Taper => {
                     let destination = o.end_size.min(initial);
@@ -125,7 +125,7 @@ fn apply(t: &mut TextLayer, (start, end): (usize, usize), o: Options) {
                     let large = nth % 2 == 0;
                     let pct = if large { o.max_percent } else { o.min_percent };
                     style.size_pt = (style.size_pt * pct / 100.0).clamp(TYPE_SIZE_MIN_PT as f32, TYPE_SIZE_MAX_PT as f32);
-                    style.slant_deg = if large { o.max_slant } else { o.min_slant };
+                    style.rotation_deg = if large { o.max_rotation } else { o.min_rotation };
                 }
             }
             nth += 1;
@@ -151,7 +151,7 @@ pub fn specs() -> Vec<CommandSpec> {
         label: "Apply Editable Text Effect",
         menu: &[],
         shortcut: None,
-        params: r##"{"layer":id?,"range":[startChar,endChar]?,"mode":"random|taper|alternate","minPercent":10..400,"maxPercent":10..400,"minSlant":-30..30 degrees,"maxSlant":-30..30 degrees,"endSize":0.1..1296 pt,"reverse":bool,"seed":u64}"##,
+        params: r##"{"layer":id?,"range":[startChar,endChar]?,"mode":"random|taper|alternate","minPercent":10..400,"maxPercent":10..400,"minRotation":-30..30 degrees,"maxRotation":-30..30 degrees,"endSize":0.1..1296 pt,"reverse":bool,"seed":u64}"##,
         enabled: target_available,
         journal: true,
         run: |s, p| {
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn taper_keeps_text_editable_and_reverses_direction() {
-        let opts = Options { mode: Mode::Taper, min_percent: 70.0, max_percent: 130.0, min_slant: -12.0, max_slant: 12.0, end_size: 10.0, reverse: false, seed: 1 };
+        let opts = Options { mode: Mode::Taper, min_percent: 70.0, max_percent: 130.0, min_rotation: -12.0, max_rotation: 12.0, end_size: 10.0, reverse: false, seed: 1 };
         let mut normal = text("TEST", 40.0);
         apply(&mut normal, (0, 4), opts);
         assert_eq!(chars(&normal).iter().map(|(_, c)| c.size_pt.round() as i32).collect::<Vec<_>>(), vec![40, 30, 20, 10]);
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn random_is_deterministic_unicode_safe_and_local_to_range() {
-        let opts = options(&json!({"mode":"random","minPercent":65,"maxPercent":95,"minSlant":-20,"maxSlant":20,"seed":99})).unwrap();
+        let opts = options(&json!({"mode":"random","minPercent":65,"maxPercent":95,"minRotation":-20,"maxRotation":20,"seed":99})).unwrap();
         let mut a = text("Aй😺B", 24.0);
         let mut b = a.clone();
         apply(&mut a, (1, 7), opts); // byte offsets covering й + 😺, not A or B
@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(cs[0].1.size_pt, 24.0);
         assert_eq!(cs[3].1.size_pt, 24.0);
         assert!(cs[1].1.size_pt < 24.0 && cs[2].1.size_pt < 24.0);
-        assert!((-20.0..=20.0).contains(&cs[1].1.slant_deg));
+        assert!((-20.0..=20.0).contains(&cs[1].1.rotation_deg));
         // PhotoCraft native save/load retains the precise custom angle.
         let json = serde_json::to_string(&a.runs).unwrap();
         let decoded: Vec<TextRun> = serde_json::from_str(&json).unwrap();
@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn bad_parameter_ranges_rejected() {
         assert!(options(&json!({"minPercent":130,"maxPercent":80})).is_err());
-        assert!(options(&json!({"minSlant":-60})).is_err());
+        assert!(options(&json!({"minRotation":-60})).is_err());
         assert!(options(&json!({"mode":"unknown"})).is_err());
         assert!(options(&json!({"endSize":0})).is_err());
         assert!(options(&json!({"seed":-1})).is_err());
