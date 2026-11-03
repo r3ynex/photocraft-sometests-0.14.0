@@ -200,6 +200,21 @@ fn draw_pass(layout: &TextLayout, transform: &Xform, sink: &mut impl LineSink, o
         };
         let coords: Vec<NormalizedCoord> = face.coords.iter().map(|&c| NormalizedCoord::from_bits(c)).collect();
         let mut glyph = glyph_xform(layout, g, face.skew_deg);
+        // Character rotation is baked into each glyph's outline transform; the
+        // layer stays a normal editable Type layer (not a transformed raster).
+        if st.rotation_deg.abs() > f32::EPSILON {
+            let cx = glyph_center(layout, g, &font, face.size_px, &coords);
+            // The visual centre is approximately half an em above the baseline.
+            let cy = f64::from(g.y) - f64::from(face.size_px) * 0.4;
+            let radians = f64::from(st.rotation_deg.clamp(-30.0, 30.0)).to_radians();
+            let (sin, cos) = radians.sin_cos();
+            let rotate = Xform([
+                cos, sin, -sin, cos,
+                cx - cos * cx + sin * cy,
+                cy - sin * cx - cos * cy,
+            ]);
+            glyph = rotate.mul(&glyph);
+        }
         // Type on a path moves each glyph rigidly: turned to the curve at its centre.
         let mut bend = warp;
         if let Some(w) = warp {
@@ -269,7 +284,7 @@ fn glyph_xform(layout: &TextLayout, g: &PlacedGlyph, face_skew_deg: f32) -> Xfor
     let Some(st) = layout.styles.get(g.style as usize) else { return Xform([1.0, 0.0, 0.0, -1.0, g.x as f64, g.y as f64]) };
     let hs = if st.horizontal_scale > 0.0 { st.horizontal_scale } else { 1.0 } as f64;
     let vs = if st.vertical_scale > 0.0 { st.vertical_scale } else { 1.0 } as f64;
-    let skew_deg = (if st.faux_italic { FAUX_ITALIC_DEG } else { 0.0 }) + face_skew_deg + st.slant_deg.clamp(-30.0, 30.0);
+    let skew_deg = if st.faux_italic { FAUX_ITALIC_DEG } else { 0.0 } + face_skew_deg;
     let skew = (skew_deg as f64).to_radians().tan() * vs;
     let shift = (st.baseline_shift_pt * layout.px_per_pt) as f64;
     let (x, y) = (g.x as f64, g.y as f64);
