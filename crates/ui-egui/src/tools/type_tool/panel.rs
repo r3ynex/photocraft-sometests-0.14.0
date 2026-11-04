@@ -234,7 +234,7 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
         let mut ready = true;
         row(ui, &mut |ui| {
             ready = fonts_ready(ui, full);
-            if ready && let Some(picked) = font_picker(app, ui, &mut fam, full) {
+            if ready && let Some(picked) = font_picker(app, ui, &mut fam, (full - 27.0).max(70.0)) {
                 app.ui.tool_options.type_font = fam.clone();
                 match picked {
                     Some(style) => {
@@ -244,6 +244,9 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
                     }
                     None => apply(app, ui.ctx(), json!({"font": fam})),
                 }
+            }
+            if ready {
+                crate::text_library::font_star(app, ui, &fam);
             }
         });
         row(ui, &mut |ui| {
