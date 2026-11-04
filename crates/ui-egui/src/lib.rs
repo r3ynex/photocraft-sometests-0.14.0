@@ -50,6 +50,7 @@ pub mod proxy;
 pub mod render_path;
 pub mod screenshot;
 pub mod state;
+pub mod text_library;
 pub mod texel_guard;
 pub mod theme;
 pub use titlebar::{Caption, CaptionFamily, CaptionIcon, CaptionIcons, CaptionStyle, RenderIconFn};
