@@ -147,6 +147,7 @@ pub(super) mod trap_cmds;
 pub mod type_area_cmds;
 pub mod type_caret_cmds;
 pub mod type_cmds;
+pub mod text_effects;
 pub mod type_extra_cmds;
 pub mod type_mask_cmds;
 pub mod type_spell_cmds;
@@ -1299,6 +1300,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::solid_fill_cmds::specs());
     v.extend(crate::pattern_fill_cmds::specs());
     v.extend(crate::type_cmds::specs());
+    v.extend(crate::text_effects::specs());
     v.extend(crate::type_mask_cmds::specs());
     v.extend(crate::transform_cmds::specs());
     v.extend(crate::float_cmds::specs());
