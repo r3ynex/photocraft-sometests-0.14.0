@@ -202,6 +202,16 @@ fn draw(layout: &TextLayout, transform: &Xform, sink: &mut impl LineSink, only: 
         };
         let coords: Vec<NormalizedCoord> = face.coords.iter().map(|&c| NormalizedCoord::from_bits(c)).collect();
         let mut glyph = glyph_xform(layout, g, face.skew_deg);
+        // Rotate only glyph outlines; underlying Unicode text and style runs remain editable.
+        if let Some(st) = layout.styles.get(g.style as usize)
+            && st.rotation_deg.abs() > f32::EPSILON
+        {
+            let cx = glyph_center(layout, g, &font, face.size_px, &coords);
+            let cy = f64::from(g.y) - f64::from(face.size_px) * 0.4;
+            let (sn, cs) = f64::from(st.rotation_deg.clamp(-30.0, 30.0)).to_radians().sin_cos();
+            let rotate = Xform([cs, sn, -sn, cs, cx - cs * cx + sn * cy, cy - sn * cx - cs * cy]);
+            glyph = rotate.mul(&glyph);
+        }
         // Type on a path moves each glyph rigidly: turned to the curve at its centre.
         let mut bend = warp;
         if let Some(w) = warp {
@@ -565,6 +575,16 @@ pub fn outlines(layout: &TextLayout, transform: &Affine, warp: Option<&Warp>) ->
         };
         let coords: Vec<NormalizedCoord> = face.coords.iter().map(|&c| NormalizedCoord::from_bits(c)).collect();
         let mut glyph = glyph_xform(layout, g, face.skew_deg);
+        // Rotate only glyph outlines; underlying Unicode text and style runs remain editable.
+        if let Some(st) = layout.styles.get(g.style as usize)
+            && st.rotation_deg.abs() > f32::EPSILON
+        {
+            let cx = glyph_center(layout, g, &font, face.size_px, &coords);
+            let cy = f64::from(g.y) - f64::from(face.size_px) * 0.4;
+            let (sn, cs) = f64::from(st.rotation_deg.clamp(-30.0, 30.0)).to_radians().sin_cos();
+            let rotate = Xform([cs, sn, -sn, cs, cx - cs * cx + sn * cy, cy - sn * cx - cs * cy]);
+            glyph = rotate.mul(&glyph);
+        }
         let mut bend = warp;
         if let Some(w) = warp {
             match w.place_glyph(glyph_center(layout, g, &font, face.size_px, &coords)) {
