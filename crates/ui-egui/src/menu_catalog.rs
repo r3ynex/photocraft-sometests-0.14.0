@@ -777,6 +777,7 @@ pub static CATALOG: &[(&[&str], &str, Option<&str>, &str)] = &[
     (&["Window"], "Properties", None, "window.panel.properties"),
     (&["Window"], "Shapes", None, "window.panel.shapes"),
     (&["Window"], "Styles", None, "window.panel.styles"),
+    (&["Window"], "Text Library", None, "window.panel.textLibrary"),
     (&["Window"], "Swatches", None, "window.panel.swatches"),
     (&["Window"], "Timeline", None, "window.panel.timeline"),
     (&["Window"], "Tool Presets", None, "window.panel.toolPresets"),
