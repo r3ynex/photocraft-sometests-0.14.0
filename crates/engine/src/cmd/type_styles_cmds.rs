@@ -102,6 +102,7 @@ fn perturbed_char() -> CharStyle {
         strikethrough: true,
         faux_bold: true,
         faux_italic: true,
+        rotation_deg: -13.0,
         kerning: Kerning::Off,
         kern: -12345.0,
         caps: Caps::AllCaps,
