@@ -462,6 +462,9 @@ pub struct UiState {
     /// Brushes panel: collapsed groups and the search filter.
     #[serde(default)]
     pub brushes_panel: crate::brush_panel::BrushesPanelState,
+    /// Text Library v2 — fonts, styles, and editable character effects.
+    #[serde(default)]
+    pub text_library: crate::text_library::State,
     /// Marquee options-bar mode: 0 new, 1 add, 2 subtract, 3 intersect (modifier keys override).
     #[serde(default)]
     pub selection_mode: u8,
@@ -614,6 +617,7 @@ impl Default for UiState {
             brush_section: 0,
             brush_tab: 0,
             brushes_panel: Default::default(),
+            text_library: Default::default(),
             selection_mode: 0,
             tool_options: ToolOptions::default(),
             recent_gradients: Vec::new(),
