@@ -1131,6 +1131,14 @@ impl LayerMaskOverlay {
     }
 }
 
+/// Named Text Library font group carried over from the original fork.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TextLibraryFontGroup {
+    pub name: String,
+    pub fonts: Vec<String>,
+}
+
 /// All preferences. JSON keys are the `edit.preferences.<section>` ids.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -1172,6 +1180,10 @@ pub struct Preferences {
     pub toolbar: ToolbarCustomization,
     /// Edit › Check Spelling: words added to the dictionary ("Add").
     pub user_dictionary: Vec<String>,
+    /// Font groups retained from the older Text Library v2 (defaults are harmless).
+    pub text_library_fonts: Vec<String>,
+    pub text_library_groups: Vec<TextLibraryFontGroup>,
+    pub text_library_active_group: String,
     /// Window › Workspace › New Workspace…: saved layouts by name (JSON owned by the shell).
     pub workspaces: BTreeMap<String, Value>,
     /// Window › Workspace › Lock Workspace: panels can't be moved.
