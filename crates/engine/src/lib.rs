@@ -155,6 +155,7 @@ use cmd::trap_cmds;
 pub use cmd::type_area_cmds;
 pub use cmd::type_caret_cmds;
 pub use cmd::type_cmds;
+pub use cmd::text_effects;
 pub use cmd::type_extra_cmds;
 pub use cmd::type_mask_cmds;
 pub use cmd::type_spell_cmds;
