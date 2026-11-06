@@ -421,6 +421,8 @@ pub struct Services {
     pub automation_save: Option<SaveFileFn>,
     /// Show an Open or Save dialog without waiting for it (see `file_dialog`).
     pub file_dialog: Option<FileDialogFn>,
+    /// RE:ICA MangaLab local cache for imported font binaries (not OS-installed).
+    pub font_pack_dir: Option<std::path::PathBuf>,
     /// Write bytes to a path (native) or trigger a download (web).
     pub write: Option<WriteFn>,
     /// Size and modification time of a file (native); `None` on the web, where Save never

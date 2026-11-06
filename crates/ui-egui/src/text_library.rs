@@ -344,7 +344,8 @@ fn type_target(app: &PhotocraftApp) -> Result<u64, String> {
 }
 
 fn apply_font(app: &mut PhotocraftApp, family: &str) -> Result<(), String> {
-    let p = crate::type_tool::with_target(app, json!({"font": family})).ok_or("Select a text layer first")?;
+    let mut p = crate::type_tool::formatting_params(app).ok_or("Select a text layer first")?;
+    p["font"] = json!(family);
     app.run("type.setStyle", p)?;
     app.note_recent_font(family);
     Ok(())
@@ -361,7 +362,10 @@ fn run_text_effect(app: &mut PhotocraftApp, effect: &EffectSettings) -> Result<(
         "reverse": effect.reverse,
         "seed": effect.seed,
     });
-    let mut p = if let Some(target) = crate::type_tool::with_target(app, props.clone()) {
+    let mut p = if let Some(mut target) = crate::type_tool::formatting_params(app) {
+        if let Some(map) = props.as_object() {
+            for (key, value) in map { target[key] = value.clone(); }
+        }
         target
     } else {
         let id = type_target(app)?;
@@ -707,10 +711,12 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         let families = crate::type_tool::families();
         ui.horizontal(|ui| {
             let width = (ui.available_width() - 77.0).max(20.0);
+            let mut library = crate::type_tool::FontLibrary::of(app);
             crate::type_tool::family_picker_in(
                 ui, "text-library-font-add", &mut state.font_to_add, width,
-                &families, app.session.prefs().type_.font_preview, &[],
+                &families, app.session.prefs().type_.font_preview, &mut library,
             );
+            library.finish(app);
             if ui.button("Add").clicked() {
                 let name = state.font_to_add.clone();
                 let result = add_font(app, &name);

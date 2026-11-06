@@ -342,6 +342,9 @@ fn handle_eyedropper_event(app: &mut PhotocraftApp, tool: Tool, ev: ToolEvent, m
 
 /// Tool state machine. Shared by mouse input and automation.
 pub fn tool_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+    // Freeform Text owns its glyph handles before ordinary Type caret routing.
+    let freeform_mods = crate::workspace_ui::sticky_mods(app, mods);
+    if crate::freeform_text::pointer(app, ev, freeform_mods) { return; }
     if consumes_cancelled_vector_event(app, ev) {
         return;
     }

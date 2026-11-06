@@ -1355,6 +1355,7 @@ fn paint_primary_overlays(app: &mut PhotocraftApp, ui: &mut egui::Ui, view: &mut
         painter.rect_stroke(edge_rect, 0.0, Stroke::new(1.0, Color32::from_gray(20)), egui::StrokeKind::Outside);
     }
     crate::type_tool::draw_overlay(app, painter, xf);
+    crate::freeform_text::draw_overlay(app, painter, xf);
     crate::transform_tool::draw_overlay(app, painter, xf);
     crate::cam_transform::draw(app, painter, xf);
     crate::cam_preview::wake(app, painter.ctx());
