@@ -6,6 +6,14 @@ use super::{Color32, LayerId, PhotocraftApp, Stroke, byte_of, insertion_style, j
 
 /// Photoshop's Type options bar.
 pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    if ui.selectable_label(app.ui.freeform_text, "◎ Freeform Text")
+        .on_hover_text("Editable MangaLab character controls: drag the dot to move, ring to rotate, square to scale. Shift-click selects several glyphs; Alt-click resets one.")
+        .clicked()
+    {
+        app.ui.freeform_text = !app.ui.freeform_text;
+        app.ui.freeform_drag = None;
+        if !app.ui.freeform_text { app.ui.freeform_selection = None; }
+    }
     let t = crate::theme::Tokens::get(ui.ctx());
     // Both Type controls describe the selected characters, or the caret's typing style.
     let shown = styles_at(app).map(|(c, _)| (shown_family(app, &c), selected_style(&c), c.size_pt * shown_scale(app), c.color));
@@ -51,6 +59,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             apply(app, ui.ctx(), json!({"fontStyle": style}));
         }
     }
+    crate::text_library::font_star(app, ui, &fam);
     let (r, icon) = ui.allocate_exact_size(egui::vec2(18.0, 22.0), egui::Sense::hover());
     crate::icons::paint(ui, r, "type", 13.0, t.icon);
     icon.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, tl!("Font size")));

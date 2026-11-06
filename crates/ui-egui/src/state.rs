@@ -223,6 +223,15 @@ pub struct UiState {
     /// Inline type editing session, if any.
     #[serde(default)]
     pub text_edit: Option<TextEdit>,
+    /// RE:ICA MangaLab: per-character on-canvas transform handles.
+    #[serde(default)]
+    pub freeform_text: bool,
+    /// In-progress gesture; never saved to the workspace.
+    #[serde(skip)]
+    pub freeform_drag: Option<crate::freeform_text::Drag>,
+    /// Shift-click glyph selection; transient across document sessions.
+    #[serde(skip)]
+    pub freeform_selection: Option<crate::freeform_text::Selection>,
     /// Whether the text being edited overflows its paragraph box (the box's lower-right handle
     /// shows the overflow "+").
     /// Read by automation while a session edits that box; never written to settings.
@@ -542,6 +551,9 @@ impl Default for UiState {
             recent_files: Vec::new(),
             recent_fonts: Vec::new(),
             text_edit: None,
+            freeform_text: false,
+            freeform_drag: None,
+            freeform_selection: None,
             type_box_overflow: false,
             type_insertion_style: None,
             caret_blink_time: 0.0,
