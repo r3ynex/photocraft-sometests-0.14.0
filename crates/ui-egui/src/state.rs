@@ -1410,6 +1410,12 @@ pub struct UiState {
     /// Inline type editing session, if any.
     #[serde(default)]
     pub text_edit: Option<TextEdit>,
+    /// Toggle per-character Move / Rotate / Scale controls in the Type tool.
+    #[serde(default)]
+    pub freeform_text: bool,
+    /// Held pointer gesture, never restored from disk.
+    #[serde(skip)]
+    pub freeform_drag: Option<crate::freeform_text::Drag>,
     /// Clock time in seconds when type cursor blink was last reset (e.g. on keypress/caret move).
     #[serde(skip)]
     pub caret_blink_time: f64,
@@ -1686,6 +1692,8 @@ impl Default for UiState {
             recent_files: Vec::new(),
             recent_fonts: Vec::new(),
             text_edit: None,
+            freeform_text: false,
+            freeform_drag: None,
             caret_blink_time: 0.0,
             text_edit_return_tool: None,
             type_transform: None,
