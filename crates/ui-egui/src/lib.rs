@@ -109,6 +109,7 @@ mod filter_preview_worker;
 pub mod flick_pan;
 mod font_preview;
 pub mod frame_tool;
+pub mod freeform_text;
 pub mod gallery_ui;
 pub mod gpu_canvas;
 pub mod gpu_status;
