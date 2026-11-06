@@ -48,6 +48,10 @@ jobs:
         shell: pwsh
         run: cargo test --locked -p photocraft-ui-egui freeform_text::tests --lib
 
+      - name: Test MangaLab portable font-pack archives
+        shell: pwsh
+        run: cargo test --locked -p photocraft-ui-egui font_pack::tests --lib
+
       - name: Compile portable release executable
         shell: pwsh
         run: cargo build --release --locked -p photocraft-reica
@@ -67,6 +71,7 @@ jobs:
           Use the Type tool's Freeform Text toggle: drag dots to move, rings to rotate, squares to scale.
           Shift-click handles to select multiple characters and transform the group.
           Shift snaps rotation to 15 degrees. Alt-click a handle to reset a character.
+          MangaLab Fonts tab can export/import complete .pcraftfp ZIP archives with original font files.
           This executable is a community fork, not an official PhotoCraft release.
           '@ | Set-Content -Encoding UTF8 'dist/REICA-MangaLab/README.txt'
           if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/REICA-MangaLab/' }
