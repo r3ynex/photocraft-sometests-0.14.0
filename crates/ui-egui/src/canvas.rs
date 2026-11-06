@@ -4707,6 +4707,7 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
             painter.rect_stroke(edge_rect, 0.0, Stroke::new(1.0, Color32::from_gray(20)), egui::StrokeKind::Outside);
         }
         crate::type_tool::draw_overlay(app, &painter, &xf);
+        crate::freeform_text::draw_overlay(app, &painter, &xf);
         crate::transform_tool::draw_overlay(app, &painter, &xf);
         crate::cam_transform::draw(app, &painter, &xf);
         crate::cam_preview::wake(app, painter.ctx());
@@ -6006,6 +6007,11 @@ pub fn tool_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers)
     let armed = std::mem::take(&mut app.brush_resize_armed);
     crate::transform_tool::end_if_left(app);
     let mods = crate::workspace_ui::sticky_mods(app, mods);
+    // Freeform Text owns only presses on a glyph's dot, ring, or scale box.
+    // Other presses still use the normal Type tool (caret and text editing).
+    if crate::freeform_text::pointer(app, ev, mods) {
+        return;
+    }
     if app.ui.transform.is_none() && crate::type_transform::pointer(app, ev, mods) {
         return;
     }
