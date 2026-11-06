@@ -32,6 +32,9 @@ pub mod dock;
 pub(crate) mod edit_session;
 pub mod file_dialog;
 pub mod font_pack;
+// RE:ICA MangaLab native type library and editable glyph controls.
+pub mod text_library;
+pub mod freeform_text;
 pub mod file_open;
 pub mod frame_stages;
 pub mod gpu_memo;
