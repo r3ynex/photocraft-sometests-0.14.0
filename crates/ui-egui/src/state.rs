@@ -1416,6 +1416,9 @@ pub struct UiState {
     /// Held pointer gesture, never restored from disk.
     #[serde(skip)]
     pub freeform_drag: Option<crate::freeform_text::Drag>,
+    /// Noncontiguous selected characters, scoped to the source document and type layer.
+    #[serde(skip)]
+    pub freeform_selection: Option<crate::freeform_text::Selection>,
     /// Clock time in seconds when type cursor blink was last reset (e.g. on keypress/caret move).
     #[serde(skip)]
     pub caret_blink_time: f64,
@@ -1694,6 +1697,7 @@ impl Default for UiState {
             text_edit: None,
             freeform_text: false,
             freeform_drag: None,
+            freeform_selection: None,
             caret_blink_time: 0.0,
             text_edit_return_tool: None,
             type_transform: None,
