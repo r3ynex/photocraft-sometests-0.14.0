@@ -1,7 +1,7 @@
-//! Text Library for PhotoCraft v0.15.1.
+//! RE:ICA Manga Lab — native type presets and editable effects for the PhotoCraft fork.
 //!
 //! Fonts are independent global favourites (Preferences::text_library_fonts).
-//! Styles use the engine's persistent StylePreset library, in the "Text Library" group.
+//! Styles use the existing "Text Library" preset group for backward compatibility.
 //! A style is *effects only*, never font, color, point size, alignment, or text content.
 //!
 //! Integrated into PhotoCraft's native docking system, with bounded 3-column cards
@@ -19,6 +19,7 @@ use serde_json::{Value, json};
 
 use crate::PhotocraftApp;
 
+// Preserve existing Text Library presets on upgrade, despite the new display name.
 const GROUP: &str = "Text Library";
 const PREVIEW_ID: &str = "photocraft-text-library-style-previews";
 const CARD_H: f32 = 79.0;
