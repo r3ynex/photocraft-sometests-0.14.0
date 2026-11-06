@@ -99,7 +99,7 @@ pub mod eyedropper_ui;
 pub mod field_tab;
 pub mod field_wheel;
 pub mod file_dialog;
-mod font_pack;
+pub mod font_pack;
 pub mod file_open;
 pub mod file_ui;
 pub mod fill_ui;
@@ -581,6 +581,9 @@ pub struct Services {
     pub automation_save: Option<SaveFileFn>,
     /// Show an Open or Save dialog without waiting for it (see `file_dialog`).
     pub file_dialog: Option<FileDialogFn>,
+    /// Editor-private directory for imported MangaLab font binaries, so the
+    /// exported pack's fonts remain available after the next launch.
+    pub font_pack_dir: Option<std::path::PathBuf>,
     /// Write bytes to a path (native) or trigger a download (web).
     pub write: Option<WriteFn>,
     /// Size and modification time of a file (native); `None` on the web, where Save never
