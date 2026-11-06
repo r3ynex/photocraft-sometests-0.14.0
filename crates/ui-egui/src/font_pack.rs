@@ -2,7 +2,7 @@
 //! A .pcraftfp file is a ZIP containing manifest.json and the actual OpenType
 //! / TrueType binaries for each font family, including additional faces.
 //! Font distribution is subject to the original fonts' licences.
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
