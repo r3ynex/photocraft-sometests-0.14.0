@@ -28,7 +28,19 @@ jobs:
           git config user.name "REICA Upstream Integration"
           git config user.email "actions@users.noreply.github.com"
           git fetch origin '+refs/heads/feature/reica-mangalab-20261106:refs/remotes/origin/feature/reica-mangalab-20261106'
-          git merge --no-ff --no-commit -s ort -X ours origin/feature/reica-mangalab-20261106
+          # PhotoCraft moved the old Type tool to tools/type_tool.rs.
+          # The removed legacy copy must not be resurrected; port the few
+          # RE:ICA Type-tool UI hooks into the new location separately.
+          if ! git merge --no-ff --no-commit -s ort -X ours origin/feature/reica-mangalab-20261106; then
+            if git ls-files -u | grep -q 'crates/ui-egui/src/type_tool.rs'; then
+              git rm -f -- crates/ui-egui/src/type_tool.rs
+            fi
+            if [ -n "$(git ls-files -u)" ]; then
+              echo "Unresolved merge conflicts remain:" >&2
+              git ls-files -u
+              exit 1
+            fi
+          fi
           git status --short
           git diff --check
           git diff --cached --check
