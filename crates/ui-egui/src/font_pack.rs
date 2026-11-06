@@ -345,6 +345,19 @@ mod tests {
         assert_eq!(prefs.text_library_groups[0].fonts, ["First", "Inter"]);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn installed_files_are_persistent_and_idempotent() {
+        let dir = tempfile::tempdir().unwrap();
+        let bytes = encode("Manga Fonts", &[FontFamily {
+            family: "Inter".into(), files: vec![font()],
+        }]).unwrap();
+        let pack = decode(&bytes).unwrap();
+        assert_eq!(persist_fonts(dir.path(), &pack).unwrap(), 1);
+        assert_eq!(persist_fonts(dir.path(), &pack).unwrap(), 0);
+        assert!(load_persisted_fonts(dir.path()) >= 1);
+    }
+
     #[test]
     fn rejects_invalid_or_oversized_archives() {
         assert!(decode(b"{\"group\":\"empty\"}").is_err());
