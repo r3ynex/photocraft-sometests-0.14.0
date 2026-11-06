@@ -15,7 +15,7 @@ use crate::canvas::{ToolEvent, ViewXform};
 const RING: f32 = 13.0;
 const SIZE_HANDLE: f32 = 19.0;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HandleKind {
     Move,
     Rotate,
@@ -23,14 +23,14 @@ pub enum HandleKind {
 }
 
 /// Glyph indices selected with Shift-click, never persisted outside the editor.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Selection {
     pub document: u64,
     pub layer: u64,
     pub indices: Vec<usize>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct DragTarget {
     index: usize,
     end_index: usize,
@@ -39,7 +39,7 @@ struct DragTarget {
     before: CharStyle,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Drag {
     document: u64,
     layer: u64,
