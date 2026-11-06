@@ -43,7 +43,8 @@ jobs:
           fi
           git status --short
           git diff --check
-          git diff --cached --check
+          # Markdown uses two trailing spaces for intentional line breaks.
+          git diff --cached --check -- . ':(exclude)REICA-MANGALAB.md'
           git commit -m "merge(reica): port MangaLab onto PhotoCraft upstream 2026-11-06"
           git push origin HEAD:refs/heads/feature/reica-mangalab-upstream-20261106
       - name: Check Rust UI integration
