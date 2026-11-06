@@ -99,6 +99,7 @@ pub mod eyedropper_ui;
 pub mod field_tab;
 pub mod field_wheel;
 pub mod file_dialog;
+mod font_pack;
 pub mod file_open;
 pub mod file_ui;
 pub mod fill_ui;
