@@ -1,7 +1,7 @@
-# Freeform Text — editable character transforms
+# RE:ICA Manga Lab — editable Freeform Text
 
 This is a **native PhotoCraft Type-layer** feature in the
-`feature/freeform-text-20261106` branch. It does not rasterise letters,
+`feature/reica-mangalab-20261106` branch of PhotoCraft [RE:ICA Edition] (`photocraft-reica`). It does not rasterise letters,
 convert text to smart objects, or create a separate layer for each character.
 
 ## How to use
@@ -12,12 +12,15 @@ convert text to smart objects, or create a separate layer for each character.
    - Drag the **centre dot** to move it freely.
    - Drag the **ring** to rotate it.
    - Drag the **square above-right** to scale it.
-4. Hold **Shift** while rotating to snap to 15-degree steps.
-5. **Alt-click** a handle to reset that character's freeform adjustments.
-6. Turn off the mode to edit the text normally. Switching it on again
+4. **Shift-click** additional handles to select multiple characters; then drag any selected dot, ring or scale square to transform the group about its shared centre.
+5. Hold **Shift** while rotating to snap to 15-degree steps.
+6. **Alt-click** a handle to reset that character's freeform adjustments.
+7. Turn off the mode to edit the text normally. Switching it on again
    shows the stored controls in their current positions.
 
-Undo/redo coalesces each drag as a single Type edit.
+Undo/redo coalesces each drag, including every selected character, into a single Type edit.
+
+The panel is displayed as **RE:ICA Manga Lab** and is listed in the Window menu as **MangaLab**. Its historical internal id and preset group remain unchanged so existing layouts, fonts and saved styles do not disappear after upgrading.
 
 ## Storage and text changes
 
@@ -42,8 +45,7 @@ freeform transforms can coexist.
 
 - This is a native PhotoCraft extension: saving as PSD may not preserve
   the manually transformed glyph appearance as editable Type data.
-- The mode currently edits one grapheme cluster at a time; batch
-  selection and group transforms can be added later.
+- Group transforms support noncontiguous selections by Shift-click; selection is editor-only and not stored in the document.
 - The controls track the normal glyph layout and are most precise on
   point/paragraph text. Text-on-path and other non-linear warps can
   require special handling.
