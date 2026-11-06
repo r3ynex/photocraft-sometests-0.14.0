@@ -228,6 +228,15 @@ fn main() -> eframe::Result {
         mut launch_options,
     } = launch;
 
+    // Restore portable MangaLab fonts before showing documents or font menus.
+    // They are private to this RE:ICA build, not installed system-wide.
+    if let Some(dir) = services::config_dir() {
+        let restored = photocraft_ui_egui::font_pack::load_persisted_fonts(&dir.join("MangaLabFonts"));
+        if restored > 0 {
+            log::info!("RE:ICA Manga Lab restored {restored} imported font files");
+        }
+    }
+
     // The log file lives under the settings directory; opened after the arguments, so `--version`
     // and usage errors leave no file behind. Records logged until now are written to it first.
     if let (Some(logger), Some(dir)) = (logger, services::config_dir()) {
