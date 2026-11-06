@@ -66,13 +66,10 @@ fn validate_name(value: &str, maximum: usize, what: &str) -> Result<(), String> 
 }
 
 fn extension(bytes: &[u8]) -> Result<&'static str, String> {
-    match bytes.get(..4) {
-        Some(b"OTTO") => Ok("otf"),
-        Some(b"ttcf") => Ok("ttc"),
-        Some(b"true") => Ok("ttf"),
-        Some([0, 1, 0, 0]) => Ok("ttf"),
-        _ => Err("A font in the pack is not a supported TTF, OTF or font collection".into()),
-    }
+    if bytes.starts_with(b"OTTO") { Ok("otf") }
+    else if bytes.starts_with(b"ttcf") { Ok("ttc") }
+    else if bytes.starts_with(b"true") || bytes.starts_with(&[0, 1, 0, 0]) { Ok("ttf") }
+    else { Err("A font in the pack is not a supported TTF, OTF or font collection".into()) }
 }
 
 /// Export a complete ZIP pack from the binaries already resolved by the text engine.
@@ -281,6 +278,11 @@ pub fn persist_fonts(directory: &Path, pack: &FontPack) -> Result<usize, String>
         }
     }
     Ok(count)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn persist_fonts(_directory: &Path, _pack: &FontPack) -> Result<usize, String> {
+    Err("Installing font files is not supported in the browser build".into())
 }
 
 /// Font packs must survive application restarts: load every validated binary
