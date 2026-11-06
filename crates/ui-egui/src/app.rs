@@ -200,6 +200,7 @@ impl PhotocraftApp {
             held_preset_import: None,
             allow_close: false,
             stylus: Default::default(),
+            pen_mouse_filter: Default::default(),
             control_click: Default::default(),
             background_jobs: false,
             min_frame_ms: None,
@@ -258,6 +259,17 @@ impl eframe::App for PhotocraftApp {
         // Leave Ctrl+whole-notch mouse scrolling alone, and honour the pinch preference.
         if cfg!(any(target_os = "windows", target_os = "linux")) && self.session.prefs().enhanced_controls.zoom_with_trackpad_pinch {
             wheel_nav::fold_legacy_pinch(ctx, raw_input);
+        }
+        // Filter OS input before the automation/control channel inserts synthetic events.
+        // No global Windows hooks: buttons and scrolling are never modified.
+        #[cfg(target_os = "windows")]
+        {
+            let mode = if self.ui.tool.is_brushlike() { self.ui.tool_options.pen_mouse_mode } else { crate::pen_mouse_guard::Mode::Off };
+            if raw_input.focused {
+                self.pen_mouse_filter.filter(&mut raw_input.events, mode, raw_input.time.unwrap_or(0.0));
+            } else {
+                self.pen_mouse_filter.reset();
+            }
         }
         self.inject_synthetic(ctx, raw_input);
         // After the control channel's own events (`ui.type`) join the OS's, before any widget.

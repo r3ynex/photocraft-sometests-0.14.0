@@ -221,6 +221,9 @@ pub struct ToolOptions {
     /// Not a blend mode, so it is kept beside the brush's `mode` rather than in it.
     #[serde(default)]
     pub brush_clear: bool,
+    /// Local Windows Ink pointer filter, shared by all painting tools (not a brush preset).
+    #[serde(default)]
+    pub pen_mouse_mode: crate::pen_mouse_guard::Mode,
     /// Pencil › Mode: Clear (see `brush_clear`).
     #[serde(default)]
     pub pencil_clear: bool,
@@ -474,6 +477,7 @@ impl Default for ToolOptions {
             zoom_scrubby: true,
             pencil_auto_erase: false,
             brush_clear: false,
+            pen_mouse_mode: Default::default(),
             pencil_clear: false,
             eraser_mode: default_eraser_mode(),
             magnetic_width: 10.0,

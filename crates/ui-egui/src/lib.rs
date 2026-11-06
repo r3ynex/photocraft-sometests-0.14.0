@@ -50,8 +50,8 @@ pub mod proxy;
 pub mod render_path;
 pub mod screenshot;
 pub mod state;
-pub mod text_library;
 pub mod texel_guard;
+pub mod text_library;
 pub mod theme;
 pub use titlebar::{Caption, CaptionFamily, CaptionIcon, CaptionIcons, CaptionStyle, RenderIconFn};
 pub(crate) mod tool_memory;
@@ -192,6 +192,7 @@ use input::layout_keys;
 pub use input::nudge_bundle;
 use input::opacity_keys;
 use input::page_keys;
+pub use input::pen_mouse_guard;
 use input::scrub_wrap;
 pub use input::shortcut_dispatch;
 pub use input::shortcuts;
@@ -703,6 +704,8 @@ pub struct PhotocraftApp {
     pub(crate) allow_close: bool,
     /// Pen pressure/tilt from the platform (see `stylus`).
     pub stylus: stylus::Stylus,
+    /// Only filters PhotoCraft events, never the system mouse.
+    pub(crate) pen_mouse_filter: pen_mouse_guard::Filter,
     control_click: control_click::ControlClick,
     /// Run long commands and file opens as background jobs with progress and Cancel (#210; see
     /// `jobs_ui`). The desktop app turns it on; off (the default), everything runs inline as

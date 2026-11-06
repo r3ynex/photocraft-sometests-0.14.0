@@ -89,9 +89,7 @@ fn apply(t: &mut TextLayer, (start, end): (usize, usize), o: Options) {
         return;
     }
     let old = t.char_runs();
-    let total = t.text.char_indices()
-        .filter(|(at, ch)| *at >= start && *at < end && *ch != '\n' && *ch != '\r')
-        .count();
+    let total = t.text.char_indices().filter(|(at, ch)| *at >= start && *at < end && *ch != '\n' && *ch != '\r').count();
     if total == 0 {
         return;
     }
@@ -122,7 +120,7 @@ fn apply(t: &mut TextLayer, (start, end): (usize, usize), o: Options) {
                     style.size_pt = lerp(initial, destination, progress);
                 }
                 Mode::Alternate => {
-                    let large = nth % 2 == 0;
+                    let large = nth.is_multiple_of(2);
                     let pct = if large { o.max_percent } else { o.min_percent };
                     style.size_pt = (style.size_pt * pct / 100.0).clamp(TYPE_SIZE_MIN_PT as f32, TYPE_SIZE_MAX_PT as f32);
                     style.rotation_deg = if large { o.max_rotation } else { o.min_rotation };
@@ -189,7 +187,16 @@ mod tests {
 
     #[test]
     fn taper_keeps_text_editable_and_reverses_direction() {
-        let opts = Options { mode: Mode::Taper, min_percent: 70.0, max_percent: 130.0, min_rotation: -12.0, max_rotation: 12.0, end_size: 10.0, reverse: false, seed: 1 };
+        let opts = Options {
+            mode: Mode::Taper,
+            min_percent: 70.0,
+            max_percent: 130.0,
+            min_rotation: -12.0,
+            max_rotation: 12.0,
+            end_size: 10.0,
+            reverse: false,
+            seed: 1,
+        };
         let mut normal = text("TEST", 40.0);
         apply(&mut normal, (0, 4), opts);
         assert_eq!(chars(&normal).iter().map(|(_, c)| c.size_pt.round() as i32).collect::<Vec<_>>(), vec![40, 30, 20, 10]);

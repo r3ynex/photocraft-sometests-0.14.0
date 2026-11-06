@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/text-effects-latest-20261104
+      - feature/ignore-mouse-movement-while-inking
   workflow_dispatch:
 
 permissions:
