@@ -3252,11 +3252,14 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     // Native per-character handles: still the same editable Type layer.
     // Toggling this mode never changes document data or commits typing.
     if ui.selectable_label(app.ui.freeform_text, "◎ Freeform Text")
-        .on_hover_text("Drag a character's dot to move, ring to rotate, square to scale. Shift snaps rotation; Alt-click resets.")
+        .on_hover_text("Shift-click several glyph handles to select a group. Drag dot / ring / square to move / rotate / scale; Shift snaps rotations; Alt-click resets a glyph.")
         .clicked()
     {
         app.ui.freeform_text = !app.ui.freeform_text;
         app.ui.freeform_drag = None;
+        if !app.ui.freeform_text {
+            app.ui.freeform_selection = None;
+        }
     }
     ui.separator();
     let t = crate::theme::Tokens::get(ui.ctx());
