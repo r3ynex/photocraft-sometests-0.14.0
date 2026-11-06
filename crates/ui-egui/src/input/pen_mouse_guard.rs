@@ -117,10 +117,7 @@ impl Filter {
         let active = match mode {
             Mode::Off => false,
             Mode::Contact => pen_during_frame,
-            Mode::Hover => {
-                pen_during_frame
-                    || self.last_pen_event.is_some_and(|t| (0.0..=HOVER_GRACE_SECS).contains(&(now - t)))
-            }
+            Mode::Hover => pen_during_frame || self.last_pen_event.is_some_and(|t| (0.0..=HOVER_GRACE_SECS).contains(&(now - t))),
         };
         if active {
             events.retain(|e| {
@@ -141,13 +138,7 @@ mod tests {
     use super::*;
 
     fn touch(id: u64, phase: egui::TouchPhase, x: f32, force: Option<f32>) -> egui::Event {
-        egui::Event::Touch {
-            device_id: egui::TouchDeviceId(1),
-            id: egui::TouchId(id),
-            phase,
-            pos: egui::pos2(x, 10.0),
-            force,
-        }
+        egui::Event::Touch { device_id: egui::TouchDeviceId(1), id: egui::TouchId(id), phase, pos: egui::pos2(x, 10.0), force }
     }
 
     #[test]
@@ -203,10 +194,7 @@ mod tests {
     #[test]
     fn finger_start_without_hover_or_force_is_not_a_pen() {
         let mut guard = Filter::default();
-        let mut events = vec![
-            touch(2, egui::TouchPhase::Start, 10.0, None),
-            egui::Event::PointerMoved(egui::pos2(600.0, 10.0)),
-        ];
+        let mut events = vec![touch(2, egui::TouchPhase::Start, 10.0, None), egui::Event::PointerMoved(egui::pos2(600.0, 10.0))];
         guard.filter(&mut events, Mode::Hover, 1.0);
         assert!(events.iter().any(|e| matches!(e, egui::Event::PointerMoved(_))));
     }
