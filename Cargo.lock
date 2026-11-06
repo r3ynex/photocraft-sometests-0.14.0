@@ -4830,7 +4830,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft"
+name = "photocraft-reica"
 version = "0.16.0"
 dependencies = [
  "arboard",
