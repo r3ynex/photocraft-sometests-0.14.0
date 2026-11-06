@@ -412,14 +412,14 @@ fn settings_tab(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     ui.add_space(8.0);
     widgets::hairline(ui);
     ui.add_space(6.0);
-    let mut enabled = app.ui.pen_mouse_mode != crate::pen_mouse_guard::Mode::Off;
+    let mut enabled = app.ui.tool_options.pen_mouse_mode != crate::pen_mouse_guard::Mode::Off;
     if widgets::checkbox(ui, &mut enabled, tl!("Ignore mouse movement while using a pen")).changed() {
-        app.ui.pen_mouse_mode = if enabled { crate::pen_mouse_guard::Mode::Hover } else { crate::pen_mouse_guard::Mode::Off };
+        app.ui.tool_options.pen_mouse_mode = if enabled { crate::pen_mouse_guard::Mode::Hover } else { crate::pen_mouse_guard::Mode::Off };
     }
     if enabled {
         ui.horizontal(|ui| {
-            ui.radio_value(&mut app.ui.pen_mouse_mode, crate::pen_mouse_guard::Mode::Hover, tl!("Pen hovering"));
-            ui.radio_value(&mut app.ui.pen_mouse_mode, crate::pen_mouse_guard::Mode::Contact, tl!("Pen touching"));
+            ui.radio_value(&mut app.ui.tool_options.pen_mouse_mode, crate::pen_mouse_guard::Mode::Hover, tl!("Pen hovering"));
+            ui.radio_value(&mut app.ui.tool_options.pen_mouse_mode, crate::pen_mouse_guard::Mode::Contact, tl!("Pen touching"));
         });
         ui.label(
             egui::RichText::new(tl!("Windows Ink: mouse movement is ignored inside PhotoCraft. Buttons and wheel still work. The filter automatically resets when pen input stops."))
