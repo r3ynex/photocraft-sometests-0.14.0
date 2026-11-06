@@ -27,6 +27,7 @@ pub struct Drag {
     document: u64,
     layer: u64,
     index: usize,
+    end_index: usize,
     kind: HandleKind,
     start: [f64; 2],
     pivot: [f64; 2],
@@ -39,6 +40,7 @@ pub struct Drag {
 struct Handle {
     layer: LayerId,
     index: usize,
+    end_index: usize,
     center: [f64; 2],
     transform: Affine,
     style: CharStyle,
@@ -95,6 +97,7 @@ fn handles(app: &mut PhotocraftApp) -> Vec<Handle> {
         out.push(Handle {
             layer: id,
             index: photocraft_text::char_index(&text, cluster.range.start),
+            end_index: photocraft_text::char_index(&text, cluster.range.end.min(text.len())),
             center: [p.x, p.y],
             transform,
             style,
@@ -153,9 +156,9 @@ fn hit(app: &mut PhotocraftApp, xf: &ViewXform, pointer: Pos2) -> Option<(Handle
     best.map(|(_, h, k)| (h, k))
 }
 
-fn apply(app: &mut PhotocraftApp, layer: u64, index: usize, key: &str, style: &CharStyle) {
+fn apply(app: &mut PhotocraftApp, layer: u64, index: usize, end_index: usize, key: &str, style: &CharStyle) {
     let run = json!({
-        "start": index, "end": index + 1,
+        "start": index, "end": end_index.max(index + 1),
         "freeformX": style.freeform_x, "freeformY": style.freeform_y,
         "freeformAngle": style.freeform_angle,
         "freeformScale": style.freeform_scale,
@@ -216,7 +219,7 @@ pub fn pointer(app: &mut PhotocraftApp, event: ToolEvent, mods: Modifiers) -> bo
                         style.freeform_scale = (d.before.freeform_scale * current / original).clamp(0.1, 20.0);
                     }
                 }
-                apply(app, d.layer, d.index, &d.undo_key, &style);
+                apply(app, d.layer, d.index, d.end_index, &d.undo_key, &style);
                 return true;
             }
             ToolEvent::Down { .. } => {
@@ -240,13 +243,14 @@ pub fn pointer(app: &mut PhotocraftApp, event: ToolEvent, mods: Modifiers) -> bo
         style.freeform_y = 0.0;
         style.freeform_angle = 0.0;
         style.freeform_scale = 1.0;
-        apply(app, h.layer.0, h.index, &key, &style);
+        apply(app, h.layer.0, h.index, h.end_index, &key, &style);
         return true;
     }
     app.ui.freeform_drag = Some(Drag {
         document: doc,
         layer: h.layer.0,
         index: h.index,
+        end_index: h.end_index,
         kind,
         start: [x, y],
         pivot: h.center,
