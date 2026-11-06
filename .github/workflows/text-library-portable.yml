@@ -44,6 +44,10 @@ jobs:
         shell: pwsh
         run: cargo test --locked -p photocraft-engine freeform_text_tests --lib
 
+      - name: Test MangaLab multi-glyph transforms
+        shell: pwsh
+        run: cargo test --locked -p photocraft-ui-egui freeform_text::tests --lib
+
       - name: Compile portable release executable
         shell: pwsh
         run: cargo build --release --locked -p photocraft-reica
