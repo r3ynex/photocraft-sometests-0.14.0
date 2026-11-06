@@ -133,17 +133,11 @@ fn active_group(app: &PhotocraftApp) -> String {
     if group.is_empty() || group == DEFAULT_FONT_GROUP {
         return DEFAULT_FONT_GROUP.to_string();
     }
-    if prefs.text_library_groups.iter().any(|g| g.name == group) {
-        group.to_string()
-    } else {
-        DEFAULT_FONT_GROUP.to_string()
-    }
+    if prefs.text_library_groups.iter().any(|g| g.name == group) { group.to_string() } else { DEFAULT_FONT_GROUP.to_string() }
 }
 
 fn font_groups(app: &PhotocraftApp) -> Vec<String> {
-    std::iter::once(DEFAULT_FONT_GROUP.to_string())
-        .chain(app.session.prefs().text_library_groups.iter().map(|g| g.name.clone()))
-        .collect()
+    std::iter::once(DEFAULT_FONT_GROUP.to_string()).chain(app.session.prefs().text_library_groups.iter().map(|g| g.name.clone())).collect()
 }
 
 fn fonts_in_group(app: &PhotocraftApp, name: &str) -> Vec<String> {
@@ -151,8 +145,7 @@ fn fonts_in_group(app: &PhotocraftApp, name: &str) -> Vec<String> {
     if name == DEFAULT_FONT_GROUP {
         return p.text_library_fonts.clone();
     }
-    p.text_library_groups.iter().find(|g| g.name == name)
-        .map_or_else(Vec::new, |g| g.fonts.clone())
+    p.text_library_groups.iter().find(|g| g.name == name).map_or_else(Vec::new, |g| g.fonts.clone())
 }
 
 pub(crate) fn add_font_to_group(app: &mut PhotocraftApp, family: &str, name: &str) -> Result<(), String> {
@@ -204,9 +197,7 @@ fn create_group(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
         return Err(format!("A group named {name} already exists"));
     }
     app.session.edit_prefs(|p| {
-        p.text_library_groups.push(photocraft_engine::prefs::TextLibraryFontGroup {
-            name: name.to_string(), fonts: Vec::new(),
-        });
+        p.text_library_groups.push(photocraft_engine::prefs::TextLibraryFontGroup { name: name.to_string(), fonts: Vec::new() });
         p.text_library_active_group = name.to_string();
     });
     Ok(())
@@ -219,8 +210,7 @@ pub(crate) fn font_star(app: &mut PhotocraftApp, ui: &mut egui::Ui, family: &str
     let in_active = fonts_in_group(app, &active).iter().any(|f| f == family);
     let label = if in_active { "★" } else { "☆" };
     let shift = ui.input(|i| i.modifiers.shift);
-    let button = ui.add_sized([22.0, 22.0], egui::Button::new(label))
-        .on_hover_text("Add font to a group (Shift-click: active group)");
+    let button = ui.add_sized([22.0, 22.0], egui::Button::new(label)).on_hover_text("Add font to a group (Shift-click: active group)");
     if shift && button.clicked() {
         let result = add_font_to_group(app, family, &active);
         message(app, result);
@@ -308,83 +298,78 @@ fn run_text_effect(app: &mut PhotocraftApp, effect: &EffectSettings) -> Result<(
 }
 
 fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut egui::Ui) {
-    egui::ScrollArea::vertical()
-        .id_salt("text-library-character-effects")
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.label("Character effects");
-            ui.weak("Select characters with the Type tool or select a text layer. No rasterizing or smart objects.");
-            ui.add_space(6.0);
+    egui::ScrollArea::vertical().id_salt("text-library-character-effects").auto_shrink([false, false]).show(ui, |ui| {
+        ui.label("Character effects");
+        ui.weak("Select characters with the Type tool or select a text layer. No rasterizing or smart objects.");
+        ui.add_space(6.0);
 
-            egui::ComboBox::from_id_salt("text-library-effect-mode")
-                .selected_text(match settings.mode {
-                    EffectMode::Random => "Random",
-                    EffectMode::Taper => "Decrease",
-                    EffectMode::Alternate => "Alternating",
-                })
-                .width(ui.available_width().min(220.0).max(80.0))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut settings.mode, EffectMode::Random, "Random");
-                    ui.selectable_value(&mut settings.mode, EffectMode::Taper, "Decrease");
-                    ui.selectable_value(&mut settings.mode, EffectMode::Alternate, "Alternating");
+        egui::ComboBox::from_id_salt("text-library-effect-mode")
+            .selected_text(match settings.mode {
+                EffectMode::Random => "Random",
+                EffectMode::Taper => "Decrease",
+                EffectMode::Alternate => "Alternating",
+            })
+            .width(ui.available_width().min(220.0).max(80.0))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut settings.mode, EffectMode::Random, "Random");
+                ui.selectable_value(&mut settings.mode, EffectMode::Taper, "Decrease");
+                ui.selectable_value(&mut settings.mode, EffectMode::Alternate, "Alternating");
+            });
+        ui.add_space(8.0);
+
+        match settings.mode {
+            EffectMode::Random | EffectMode::Alternate => {
+                ui.label("Letter size (% of its current size)");
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Min");
+                    ui.add(egui::DragValue::new(&mut settings.min_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
+                    ui.label("Max");
+                    ui.add(egui::DragValue::new(&mut settings.max_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
                 });
-            ui.add_space(8.0);
-
-            match settings.mode {
-                EffectMode::Random | EffectMode::Alternate => {
-                    ui.label("Letter size (% of its current size)");
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label("Min");
-                        ui.add(egui::DragValue::new(&mut settings.min_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
-                        ui.label("Max");
-                        ui.add(egui::DragValue::new(&mut settings.max_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
-                    });
+                ui.add_space(5.0);
+                ui.label("Letter rotation (degrees)");
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Min");
+                    ui.add(egui::DragValue::new(&mut settings.min_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                    ui.label("Max");
+                    ui.add(egui::DragValue::new(&mut settings.max_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                });
+                if settings.mode == EffectMode::Random {
                     ui.add_space(5.0);
-                    ui.label("Letter rotation (degrees)");
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label("Min");
-                        ui.add(egui::DragValue::new(&mut settings.min_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
-                        ui.label("Max");
-                        ui.add(egui::DragValue::new(&mut settings.max_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
-                    });
-                    if settings.mode == EffectMode::Random {
-                        ui.add_space(5.0);
-                        ui.horizontal(|ui| {
-                            ui.label(format!("Variation #{}", settings.seed));
-                            if ui.small_button("New seed").on_hover_text("Generate a different deterministic random pattern").clicked() {
-                                settings.seed = settings.seed.wrapping_add(1);
-                            }
-                        });
-                    } else {
-                        ui.weak("Alternates large/small and left/right rotation for each character.");
-                    }
-                }
-                EffectMode::Taper => {
-                    ui.label("Last letter size");
                     ui.horizontal(|ui| {
-                        ui.add(egui::DragValue::new(&mut settings.end_size).range(0.1..=1296.0).speed(0.5).suffix(" pt"));
-                        ui.checkbox(&mut settings.reverse, "Reverse");
+                        ui.label(format!("Variation #{}", settings.seed));
+                        if ui.small_button("New seed").on_hover_text("Generate a different deterministic random pattern").clicked() {
+                            settings.seed = settings.seed.wrapping_add(1);
+                        }
                     });
-                    ui.weak("Normal: start at the first letter's size and shrink to this limit. Reverse: grow from the limit to the original size.");
+                } else {
+                    ui.weak("Alternates large/small and left/right rotation for each character.");
                 }
             }
-            if settings.min_percent > settings.max_percent || settings.min_rotation > settings.max_rotation {
-                ui.colored_label(egui::Color32::from_rgb(240, 130, 90), "Minimum must not exceed maximum.");
+            EffectMode::Taper => {
+                ui.label("Last letter size");
+                ui.horizontal(|ui| {
+                    ui.add(egui::DragValue::new(&mut settings.end_size).range(0.1..=1296.0).speed(0.5).suffix(" pt"));
+                    ui.checkbox(&mut settings.reverse, "Reverse");
+                });
+                ui.weak("Normal: start at the first letter's size and shrink to this limit. Reverse: grow from the limit to the original size.");
             }
-            ui.add_space(10.0);
-            let enabled = type_target(app).is_ok()
-                && settings.min_percent <= settings.max_percent
-                && settings.min_rotation <= settings.max_rotation;
-            if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
-                let result = run_text_effect(app, settings);
-                message(app, result);
-            }
-            if !enabled && type_target(app).is_err() {
-                ui.weak("Select an editable text layer to enable Apply.");
-            }
-            ui.add_space(8.0);
-            ui.weak("Each Apply changes character formatting and can be undone with Ctrl+Z. Applying again uses the currently styled text as its starting point.");
-        });
+        }
+        if settings.min_percent > settings.max_percent || settings.min_rotation > settings.max_rotation {
+            ui.colored_label(egui::Color32::from_rgb(240, 130, 90), "Minimum must not exceed maximum.");
+        }
+        ui.add_space(10.0);
+        let enabled = type_target(app).is_ok() && settings.min_percent <= settings.max_percent && settings.min_rotation <= settings.max_rotation;
+        if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
+            let result = run_text_effect(app, settings);
+            message(app, result);
+        }
+        if !enabled && type_target(app).is_err() {
+            ui.weak("Select an editable text layer to enable Apply.");
+        }
+        ui.add_space(8.0);
+        ui.weak("Each Apply changes character formatting and can be undone with Ctrl+Z. Applying again uses the currently styled text as its starting point.");
+    });
 }
 
 fn library_styles(app: &PhotocraftApp) -> Vec<StylePreset> {
@@ -399,10 +384,13 @@ fn save_style(app: &mut PhotocraftApp) -> Result<(), String> {
     }
     // Native preset persistence: this is saved to Preferences/presets and
     // survives app restarts, while the document's text formatting is never read.
-    app.run("style.presets.new", json!({
-        "name": "Text Style", "group": GROUP, "layer": layer,
-        "includeEffects": true, "includeBlending": false
-    }))?;
+    app.run(
+        "style.presets.new",
+        json!({
+            "name": "Text Style", "group": GROUP, "layer": layer,
+            "includeEffects": true, "includeBlending": false
+        }),
+    )?;
     Ok(())
 }
 
@@ -410,21 +398,28 @@ fn apply_style(app: &mut PhotocraftApp, preset: &StylePreset) -> Result<(), Stri
     let id = type_target(app)?;
     // The regular `style.presets.apply` command resets Fill Opacity even when
     // the preset has no blending options. `replace` changes *only* layer effects.
-    let effects: Vec<Value> = preset.effects.iter().map(|fx| {
-        json!({
-            "kind": photocraft_engine::layer_style::kind_of(fx),
-            "fx": fx,
-            "params": {}
+    let effects: Vec<Value> = preset
+        .effects
+        .iter()
+        .map(|fx| {
+            json!({
+                "kind": photocraft_engine::layer_style::kind_of(fx),
+                "fx": fx,
+                "params": {}
+            })
         })
-    }).collect();
+        .collect();
     app.run("layer.layerStyle.replace", json!({"layer": id, "effects": effects}))?;
     Ok(())
 }
 
 fn delete_style(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
-    app.run("style.presets.edit", json!({
-        "action": "delete", "group": GROUP, "preset": name
-    }))?;
+    app.run(
+        "style.presets.edit",
+        json!({
+            "action": "delete", "group": GROUP, "preset": name
+        }),
+    )?;
     Ok(())
 }
 
@@ -450,12 +445,7 @@ fn remove_card(app: &mut PhotocraftApp, tab: Tab, name: &str) -> Result<(), Stri
 // Actual text shaped and rendered by PhotoCraft's text engine, with the saved
 // layer effects applied by PhotoCraft's compositor. No imitation CSS styles.
 fn render_style_preview(preset: &StylePreset) -> ColorImage {
-    let mut doc = Document::new(
-        "Text Library Preview",
-        Size::new(PREVIEW_W, PREVIEW_H),
-        ColorMode::Rgb,
-        SampleType::U8,
-    );
+    let mut doc = Document::new("Text Library Preview", Size::new(PREVIEW_W, PREVIEW_H), ColorMode::Rgb, SampleType::U8);
     let mut text = TextLayer {
         text: "Aa".into(),
         font_family: photocraft_text::fonts::DEFAULT_FAMILY.to_string(),
@@ -501,9 +491,20 @@ fn style_texture(ctx: &egui::Context, style: &StylePreset) -> TextureHandle {
 fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePreset>, rect: Rect, picked: bool) -> egui::Response {
     let theme = crate::theme::Tokens::get(ui.ctx());
     let response = ui.interact(rect, ui.id().with(("text-library-card", tab, name)), Sense::click_and_drag());
-    let fill = if picked { theme.row_selected } else if response.hovered() { theme.hover } else { theme.field };
+    let fill = if picked {
+        theme.row_selected
+    } else if response.hovered() {
+        theme.hover
+    } else {
+        theme.field
+    };
     ui.painter().rect_filled(rect, CornerRadius::same(9), fill);
-    ui.painter().rect_stroke(rect, CornerRadius::same(9), egui::Stroke::new(1.0, if picked { theme.accent } else { theme.card_border }), egui::StrokeKind::Inside);
+    ui.painter().rect_stroke(
+        rect,
+        CornerRadius::same(9),
+        egui::Stroke::new(1.0, if picked { theme.accent } else { theme.card_border }),
+        egui::StrokeKind::Inside,
+    );
 
     let preview = Rect::from_min_max(rect.min + vec2(3.0, 3.0), pos2(rect.right() - 3.0, rect.bottom() - 25.0));
     if ui.is_rect_visible(rect) {
@@ -548,23 +549,31 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         ui.selectable_value(&mut state.tab, Tab::Styles, "Styles");
         ui.selectable_value(&mut state.tab, Tab::Effects, "Effects");
         if state.tab != Tab::Effects {
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer", Tab::Effects => "Editable text effects" }).clicked() {
-                match state.tab {
-                    Tab::Fonts => {
-                        state.adding_font = !state.adding_font;
-                        if state.font_to_add.is_empty() {
-                            state.font_to_add = crate::type_tool::families().first().cloned().unwrap_or_default();
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .small_button("+")
+                    .on_hover_text(match state.tab {
+                        Tab::Fonts => "Add an installed font",
+                        Tab::Styles => "Save effects from selected text layer",
+                        Tab::Effects => "Editable text effects",
+                    })
+                    .clicked()
+                {
+                    match state.tab {
+                        Tab::Fonts => {
+                            state.adding_font = !state.adding_font;
+                            if state.font_to_add.is_empty() {
+                                state.font_to_add = crate::type_tool::families().first().cloned().unwrap_or_default();
+                            }
                         }
+                        Tab::Styles => {
+                            let result = save_style(app);
+                            message(app, result);
+                        }
+                        Tab::Effects => {}
                     }
-                    Tab::Styles => {
-                        let result = save_style(app);
-                        message(app, result);
-                    },
-                    Tab::Effects => {},
                 }
-            }
-        });
+            });
         }
     });
     ui.separator();
@@ -594,8 +603,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         }
         if state.creating_group {
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut state.new_group_name)
-                    .hint_text("Group name").desired_width(170.0));
+                ui.add(egui::TextEdit::singleline(&mut state.new_group_name).hint_text("Group name").desired_width(170.0));
                 if ui.small_button("Create").clicked() {
                     let result = create_group(app, &state.new_group_name);
                     if result.is_ok() {
@@ -616,8 +624,13 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             let width = (ui.available_width() - 77.0).max(20.0);
             let mut lib = crate::type_tool::FontLibrary::of(app);
             crate::type_tool::family_picker_in(
-                ui, "text-library-font-add", &mut state.font_to_add, width,
-                &families, app.session.prefs().type_.font_preview, &mut lib,
+                ui,
+                "text-library-font-add",
+                &mut state.font_to_add,
+                width,
+                &families,
+                app.session.prefs().type_.font_preview,
+                &mut lib,
             );
             lib.finish(app);
             if ui.button("Add").clicked() {
@@ -653,54 +666,43 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     // Only the scroll content consumes rows. The fixed header and trash stay in place.
     // The scrollbar is managed by ScrollArea; compute widths from its actual inner UI.
     let scroll_height = (ui.available_height() - 50.0).max(34.0);
-    egui::ScrollArea::vertical()
-        .id_salt(("text-library-cards", state.tab))
-        .max_height(scroll_height)
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            let content_width = ui.available_width().max(1.0);
-            let card_width = ((content_width - 2.0 * GAP) / 3.0).max(0.0);
-            let row_count = names.len().div_ceil(3);
-            let grid_height = if row_count == 0 {
-                1.0
-            } else {
-                row_count as f32 * CARD_H + (row_count - 1) as f32 * GAP
-            };
+    egui::ScrollArea::vertical().id_salt(("text-library-cards", state.tab)).max_height(scroll_height).auto_shrink([false, false]).show(ui, |ui| {
+        let content_width = ui.available_width().max(1.0);
+        let card_width = ((content_width - 2.0 * GAP) / 3.0).max(0.0);
+        let row_count = names.len().div_ceil(3);
+        let grid_height = if row_count == 0 { 1.0 } else { row_count as f32 * CARD_H + (row_count - 1) as f32 * GAP };
 
-            // Reserve the ENTIRE grid height at once. Individual cards use
-            // ui.interact(rect), which does not advance the layout cursor.
-            // The single reservation prevents overlapping rows and keeps
-            // ScrollArea's content height accurate in narrow docked panels.
-            let (grid_rect, _) = ui.allocate_exact_size(
-                vec2(content_width, grid_height),
-                Sense::hover(),
-            );
-            for (index, name) in names.iter().enumerate() {
-                let col = (index % 3) as f32;
-                let row = (index / 3) as f32;
-                let x = grid_rect.left() + col * (card_width + GAP);
-                let y = grid_rect.top() + row * (CARD_H + GAP);
-                let card_rect = Rect::from_min_size(pos2(x, y), vec2(card_width, CARD_H));
-                let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
-                let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
-                let response = paint_card(ui, state.tab, name, style, card_rect, selected);
-                if response.clicked() {
-                    state.selected = Some((state.tab, name.clone()));
-                    let result = apply_card(app, state.tab, name, &styles);
-                    message(app, result);
-                }
-                if response.drag_started() {
-                    state.dragged = Some((state.tab, name.clone()));
-                }
-                response.context_menu(|ui| {
-                    if ui.button("Remove from group").clicked() {
-                        let result = remove_card(app, state.tab, name);
-                        message(app, result);
-                        ui.close();
-                    }
-                });
+        // Reserve the ENTIRE grid height at once. Individual cards use
+        // ui.interact(rect), which does not advance the layout cursor.
+        // The single reservation prevents overlapping rows and keeps
+        // ScrollArea's content height accurate in narrow docked panels.
+        let (grid_rect, _) = ui.allocate_exact_size(vec2(content_width, grid_height), Sense::hover());
+        for (index, name) in names.iter().enumerate() {
+            let col = (index % 3) as f32;
+            let row = (index / 3) as f32;
+            let x = grid_rect.left() + col * (card_width + GAP);
+            let y = grid_rect.top() + row * (CARD_H + GAP);
+            let card_rect = Rect::from_min_size(pos2(x, y), vec2(card_width, CARD_H));
+            let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
+            let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
+            let response = paint_card(ui, state.tab, name, style, card_rect, selected);
+            if response.clicked() {
+                state.selected = Some((state.tab, name.clone()));
+                let result = apply_card(app, state.tab, name, &styles);
+                message(app, result);
             }
-        });
+            if response.drag_started() {
+                state.dragged = Some((state.tab, name.clone()));
+            }
+            response.context_menu(|ui| {
+                if ui.button("Remove from group").clicked() {
+                    let result = remove_card(app, state.tab, name);
+                    message(app, result);
+                    ui.close();
+                }
+            });
+        }
+    });
 
     ui.add_space(5.0);
     let (trash, response) = ui.allocate_exact_size(Vec2::new(ui.available_width().max(1.0), 31.0), Sense::hover());
