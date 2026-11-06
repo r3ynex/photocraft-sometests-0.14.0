@@ -12,5 +12,6 @@ pub mod shortcuts;
 pub(super) mod single_line_drag;
 pub mod spring_tools;
 pub mod stylus;
+pub mod pen_mouse_guard;
 pub(super) mod tool_shortcuts;
 pub mod touch_twins;
