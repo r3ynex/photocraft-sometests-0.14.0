@@ -552,7 +552,7 @@ fn render_style_preview(preset: &StylePreset) -> ColorImage {
 
 fn style_texture(ctx: &egui::Context, style: &StylePreset) -> TextureHandle {
     let key = format!("{}:{}", style.name, serde_json::to_string(&style.effects).unwrap_or_default());
-    let id = egui::Id::new(PREVIEW_ID);
+    let id = egui::Id::unique(PREVIEW_ID);
     if let Some(texture) = ctx.data_mut(|data| {
         let cache = data.get_temp_mut_or_default::<StyleTextures>(id);
         let index = cache.0.iter().position(|(k, _)| k == &key)?;
@@ -577,7 +577,7 @@ fn style_texture(ctx: &egui::Context, style: &StylePreset) -> TextureHandle {
 
 fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePreset>, rect: Rect, picked: bool) -> egui::Response {
     let theme = crate::theme::Tokens::get(ui.ctx());
-    let response = ui.interact(rect, ui.id().with(("text-library-card", tab, name)), Sense::click_and_drag());
+    let response = ui.interact(rect, ui.scope_id().with(("text-library-card", tab, name)), Sense::click_and_drag());
     let fill = if picked { theme.row_selected } else if response.hovered() { theme.hover } else { theme.field };
     ui.painter().rect_filled(rect, CornerRadius::same(9), fill);
     ui.painter().rect_stroke(rect, CornerRadius::same(9), egui::Stroke::new(1.0, if picked { theme.accent } else { theme.card_border }), egui::StrokeKind::Inside);
