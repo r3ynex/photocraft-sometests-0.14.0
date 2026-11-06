@@ -59,7 +59,8 @@ jobs:
           PhotoCraft + Text Library + editable Freeform Text
           Windows x64 portable (unsigned, custom build)
           Double-click photocraft.exe to run; no installer required.
-          Use the Type tool's Freeform Text toggle: drag dots to move, rings to rotate, squares to scale.\n          Shift snaps rotation to 15 degrees. Alt-click a handle to reset a character.
+          Use the Type tool's Freeform Text toggle: drag dots to move, rings to rotate, squares to scale.
+          Shift snaps rotation to 15 degrees. Alt-click a handle to reset a character.
           This executable is a community fork, not an official PhotoCraft release.
           '@ | Set-Content -Encoding UTF8 'dist/PhotoCraft-Text-Library/README.txt'
           if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/PhotoCraft-Text-Library/' }
