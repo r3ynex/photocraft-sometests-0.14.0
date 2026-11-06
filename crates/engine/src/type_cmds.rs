@@ -2015,3 +2015,67 @@ Xb"}),
         assert_eq!(text_layer(&s, empty).char_runs()[0].style.leading_pt, Some(10.0));
     }
 }
+
+#[cfg(test)]
+mod freeform_text_tests {
+    use super::*;
+
+    fn style_at(t: &TextLayer, char_index: usize) -> CharStyle {
+        let byte = photocraft_text::byte_index(&t.text, char_index);
+        let mut end = 0;
+        for r in t.char_runs() {
+            end += r.len;
+            if byte < end {
+                return r.style;
+            }
+        }
+        panic!("no character style");
+    }
+
+    #[test]
+    fn inserted_cyrillic_shifts_freeform_but_replacement_inherits_it() {
+        let mut t = TextLayer { text: "абв".into(), ..Default::default() };
+        style_range(&mut t, 2, 4, &|st| {
+            st.freeform_x = 47.0;
+            st.freeform_y = -8.0;
+            st.freeform_angle = 63.0;
+            st.freeform_scale = 1.8;
+        });
+        replace_text(&mut t, 0, 0, "Я");
+        assert_eq!(t.text, "Яабв");
+        assert_eq!(style_at(&t, 0).freeform_x, 0.0);
+        assert_eq!(style_at(&t, 2).freeform_x, 47.0);
+
+        // Replace the modified character with another UTF-8 character.
+        replace_text(&mut t, 4, 6, "о");
+        assert_eq!(t.text, "Яаов");
+        let changed = style_at(&t, 2);
+        assert_eq!(changed.freeform_x, 47.0);
+        assert_eq!(changed.freeform_y, -8.0);
+        assert_eq!(changed.freeform_angle, 63.0);
+        assert_eq!(changed.freeform_scale, 1.8);
+
+        // Insert characters before it: new ones are not dragged along by
+        // inherited run formatting, while the adjusted character shifts.
+        replace_text(&mut t, 4, 4, "++");
+        assert_eq!(t.text, "Яа++ов");
+        assert_eq!(style_at(&t, 2).freeform_x, 0.0);
+        assert_eq!(style_at(&t, 3).freeform_scale, 1.0);
+        assert_eq!(style_at(&t, 4).freeform_x, 47.0);
+    }
+
+    #[test]
+    fn freeform_styles_roundtrip_through_serde_defaults() {
+        let mut st = CharStyle::default();
+        st.freeform_x = -3.0;
+        st.freeform_y = 15.5;
+        st.freeform_angle = -179.0;
+        st.freeform_scale = 2.25;
+        let encoded = serde_json::to_string(&st).unwrap();
+        let decoded: CharStyle = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, st);
+        let legacy: CharStyle = serde_json::from_str(r#"{"size_pt":14.0}"#).unwrap();
+        assert_eq!(legacy.freeform_scale, 1.0);
+        assert_eq!(legacy.freeform_x, 0.0);
+    }
+}
