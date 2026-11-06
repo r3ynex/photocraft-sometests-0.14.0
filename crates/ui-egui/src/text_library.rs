@@ -245,6 +245,90 @@ pub(crate) fn font_star(app: &mut PhotocraftApp, ui: &mut egui::Ui, family: &str
     }
 }
 
+/// A real portable .pcraftfp ZIP containing every installed face of each
+/// family (TTF/OTF/TTC). A family that is unavailable cannot be exported as
+/// a complete pack; show an error rather than silently omitting its files.
+fn export_font_group(app: &mut PhotocraftApp) -> Result<Value, String> {
+    let group = active_group(app);
+    let names = fonts_in_group(app, &group);
+    if names.is_empty() {
+        return Err("This font group is empty".into());
+    }
+    let families = {
+        let shared = photocraft_text::shared();
+        let mut engine = shared.lock().map_err(|_| "Font database is temporarily unavailable")?;
+        let mut out = Vec::new();
+        for name in names {
+            let files = engine.fonts.family_font_data(&name);
+            if files.is_empty() {
+                return Err(format!("Font family {name} is unavailable. Install it or remove it from this group before exporting."));
+            }
+            out.push(crate::font_pack::FontFamily { family: name, files });
+        }
+        out
+    };
+    let bytes = crate::font_pack::encode(&group, &families)?;
+    let filename = crate::font_pack::suggested_filename(&group);
+    app.pick_save(&filename, move |app, path| {
+        if !std::path::Path::new(&path).extension().is_some_and(|s| s.eq_ignore_ascii_case("pcraftfp")) {
+            return Err("Font pack must be saved with the .pcraftfp extension".into());
+        }
+        let write = app.services.write.as_mut().ok_or("No file writer is configured")?;
+        write(&path, &bytes)?;
+        app.ui.status = format!("Exported {} font families to {path}. Check each font's licence before sharing.", families.len());
+        app.ui.status_error = false;
+        Ok(json!({"path": path, "families": families.len()}))
+    })
+}
+
+/// Import a self-contained font group; install binaries privately for this
+/// editor, register them immediately, then merge the names into Preferences.
+/// Existing groups are merged, never replaced, and repeated imports are safe.
+fn import_font_group(app: &mut PhotocraftApp) -> Result<Value, String> {
+    app.pick_file_bytes_filtered(&["pcraftfp"], |app, filename, bytes| {
+        if !std::path::Path::new(&filename).extension().is_some_and(|s| s.eq_ignore_ascii_case("pcraftfp")) {
+            return Err("Select a .pcraftfp font pack".into());
+        }
+        let pack = crate::font_pack::decode(&bytes)?;
+        let directory = app.services.font_pack_dir.clone().ok_or(
+            "Font-pack installation is unavailable on this platform"
+        )?;
+        // Persist every source only after validating the full archive, before
+        // claiming the group is imported. Startup reloads these same binaries.
+        let installed_files = crate::font_pack::persist_fonts(&directory, &pack)?;
+        let mut engine = photocraft_text::shared().lock()
+            .map_err(|_| "Font database is temporarily unavailable")?;
+        for family in &pack.fonts {
+            for file in &family.files {
+                let installed = engine.fonts.register_font_data(file.clone());
+                if !installed.iter().any(|actual| actual.eq_ignore_ascii_case(&family.family)) {
+                    return Err(format!("Font file does not contain the expected family {}", family.family));
+                }
+            }
+        }
+        drop(engine);
+        let names: Vec<String> = pack.fonts.iter().map(|font| font.family.clone()).collect();
+        let mut report = None;
+        app.session.prefs.edit(|prefs| {
+            report = Some(crate::font_pack::merge(prefs, &pack.group, &names));
+        });
+        let mut report = report.ok_or("Could not update font preferences")?;
+        report.installed_files = installed_files;
+        app.ui.text_library.selected = None;
+        app.ui.status = format!(
+            "Imported group {}: {} new favourites, {} already present; {} new font files saved.",
+            report.group, report.added, report.skipped_duplicates, report.installed_files
+        );
+        app.ui.status_error = false;
+        Ok(json!({
+            "group": report.group,
+            "added": report.added,
+            "skipped": report.skipped_duplicates,
+            "fontFilesSaved": report.installed_files
+        }))
+    })
+}
+
 fn type_target(app: &PhotocraftApp) -> Result<u64, String> {
     // The type tool can retain an editing selection distinct from the active Layers row.
     if let Some(ed) = &app.ui.text_edit {
@@ -585,6 +669,22 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             app.session.prefs.edit(|p| p.text_library_active_group = selected_group);
             state.selected = None;
         }
+        ui.horizontal_wrapped(|ui| {
+            if ui.small_button("Export…")
+                .on_hover_text("Save this entire group as .pcraftfp, including the real TTF/OTF/TTC font files. Share only if their licences permit.")
+                .clicked()
+            {
+                let result = export_font_group(app);
+                message(app, result.map(|_| ()));
+            }
+            if ui.small_button("Import…")
+                .on_hover_text("Import a .pcraftfp group and its font files; install privately for RE:ICA Edition. Existing groups are merged.")
+                .clicked()
+            {
+                let result = import_font_group(app);
+                message(app, result.map(|_| ()));
+            }
+        });
         if state.creating_group {
             ui.horizontal(|ui| {
                 ui.add(egui::TextEdit::singleline(&mut state.new_group_name)
