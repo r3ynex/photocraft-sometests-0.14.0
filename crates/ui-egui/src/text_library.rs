@@ -270,7 +270,7 @@ fn export_font_group(app: &mut PhotocraftApp) -> Result<Value, String> {
     let bytes = crate::font_pack::encode(&group, &families)?;
     let filename = crate::font_pack::suggested_filename(&group);
     app.pick_save(&filename, move |app, path| {
-        if !std::path::Path::new(&path).extension().is_some_and(|s| s.eq_ignore_ascii_case("pcraftfp")) {
+        if !std::path::Path::new(&path).extension().and_then(|s| s.to_str()).is_some_and(|s| s.eq_ignore_ascii_case("pcraftfp")) {
             return Err("Font pack must be saved with the .pcraftfp extension".into());
         }
         let write = app.services.write.as_mut().ok_or("No file writer is configured")?;
@@ -286,7 +286,7 @@ fn export_font_group(app: &mut PhotocraftApp) -> Result<Value, String> {
 /// Existing groups are merged, never replaced, and repeated imports are safe.
 fn import_font_group(app: &mut PhotocraftApp) -> Result<Value, String> {
     app.pick_file_bytes_filtered(&["pcraftfp"], |app, filename, bytes| {
-        if !std::path::Path::new(&filename).extension().is_some_and(|s| s.eq_ignore_ascii_case("pcraftfp")) {
+        if !std::path::Path::new(&filename).extension().and_then(|s| s.to_str()).is_some_and(|s| s.eq_ignore_ascii_case("pcraftfp")) {
             return Err("Select a .pcraftfp font pack".into());
         }
         let pack = crate::font_pack::decode(&bytes)?;
