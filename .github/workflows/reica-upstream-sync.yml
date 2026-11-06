@@ -14,7 +14,6 @@ concurrency:
 
 jobs:
   integrate:
-    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'chore(reica): prepare upstream integration workflow'
     runs-on: ubuntu-latest
     steps:
       - name: Check out latest PhotoCraft upstream base
