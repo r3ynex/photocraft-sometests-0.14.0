@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           git config user.name "REICA Upstream Integration"
           git config user.email "actions@users.noreply.github.com"
-          cargo metadata --format-version 1 --no-deps > /dev/null
+          cargo metadata --format-version 1 > /dev/null
           if ! git diff --quiet -- Cargo.lock; then
             git add Cargo.lock
             git commit -m "build(reica): regenerate Cargo.lock for merged upstream"
