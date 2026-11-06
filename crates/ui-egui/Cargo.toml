@@ -38,6 +38,8 @@ log = { workspace = true }
 # Display order of right-to-left labels (`bidi_text.rs`); already linked through usvg.
 unicode-bidi = "0.3"
 base64 = "0.23"
+# Versioned .pcraftfp archives include actual font binaries.
+zip = { version = "=9.1.0", default-features = false, features = ["deflate"] }
 # Inflating the translation catalogs, stored deflated (build.rs); already linked through photocraft-io.
 flate2 = { workspace = true }
 web-time = { workspace = true }
