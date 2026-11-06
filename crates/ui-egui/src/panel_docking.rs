@@ -41,7 +41,7 @@ const PANELS: &[(&str, &str, Group)] = &[
     ("channels", "Channels", Group::Layers),
     ("paths", "Paths", Group::Layers),
     ("brushes", "Brushes", Group::Brushes),
-    ("textLibrary", "Text Library", Group::Character),
+    ("textLibrary", "RE:ICA Manga Lab", Group::Character),
 ];
 
 /// PhotoCraft's wording of craft-ui's docking labels, translated through `tl!`. The others keep
