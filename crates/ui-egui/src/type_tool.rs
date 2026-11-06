@@ -3249,6 +3249,16 @@ pub fn foreground_changed(app: &mut PhotocraftApp) {
 
 /// Photoshop's Type options bar.
 pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    // Native per-character handles: still the same editable Type layer.
+    // Toggling this mode never changes document data or commits typing.
+    if ui.selectable_label(app.ui.freeform_text, "◎ Freeform Text")
+        .on_hover_text("Drag a character's dot to move, ring to rotate, square to scale. Shift snaps rotation; Alt-click resets.")
+        .clicked()
+    {
+        app.ui.freeform_text = !app.ui.freeform_text;
+        app.ui.freeform_drag = None;
+    }
+    ui.separator();
     let t = crate::theme::Tokens::get(ui.ctx());
     // Show the target layer's (first-run) style, else the tool defaults.
     let shown = target(app).and_then(|(id, _)| {
