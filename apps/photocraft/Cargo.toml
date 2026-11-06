@@ -1,10 +1,10 @@
 [package]
-name = "photocraft"
+name = "photocraft-reica"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-default-run = "photocraft"
-description = "PhotoCraft: an open-source, native image editor"
+default-run = "photocraft-reica"
+description = "PhotoCraft RE:ICA Edition: native image editor with RE:ICA Manga Lab"
 build = "build.rs"
 
 [features]
@@ -120,7 +120,7 @@ name = "mac_menu_appkit"
 harness = false
 
 [build-dependencies]
-# Icon + VERSIONINFO for photocraft.exe; build.rs only uses it when targeting Windows.
+# Icon + VERSIONINFO for photocraft-reica.exe; build.rs only uses it when targeting Windows.
 winresource = "0.1"
 
 [dev-dependencies]

@@ -83,6 +83,16 @@ pub struct CharStyle {
     pub strikethrough: bool,
     pub faux_bold: bool,
     pub faux_italic: bool,
+    /// Rotation of individual editable glyphs in degrees; PhotoCraft-native style attribute.
+    #[serde(default)]
+    pub rotation_deg: f32,
+    /// Non-destructive Freeform Text adjustments in text-space pixels. The normal
+    /// paragraph layout and font size stay unchanged; only the glyph outline moves.
+    /// Character runs preserve these values across edits and native saves.
+    pub freeform_x: f32,
+    pub freeform_y: f32,
+    pub freeform_angle: f32,
+    pub freeform_scale: f32,
     /// Automatic (pair) kerning mode.
     pub kerning: Kerning,
     /// Manual kerning in 1/1000 em between this character and the next one (Photoshop stores it
@@ -131,6 +141,11 @@ impl Default for CharStyle {
             strikethrough: false,
             faux_bold: false,
             faux_italic: false,
+            rotation_deg: 0.0,
+            freeform_x: 0.0,
+            freeform_y: 0.0,
+            freeform_angle: 0.0,
+            freeform_scale: 1.0,
             kerning: Kerning::Metrics,
             kern: 0.0,
             caps: Caps::Normal,

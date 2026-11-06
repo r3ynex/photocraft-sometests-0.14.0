@@ -290,6 +290,26 @@ impl FontDb {
         }
     }
 
+    /// The exact binary font sources for every face in a family, including its
+    /// regular/bold/italic variants and variable font source. Used by RE:ICA Manga
+    /// Lab portable font packs; do not substitute a family-name-only manifest.
+    /// A collection may share one blob across multiple faces.
+    pub fn family_font_data(&mut self, family: &str) -> Vec<Vec<u8>> {
+        let Some(info) = self.fcx.collection.family_by_name(family) else {
+            return Vec::new();
+        };
+        let mut bytes = Vec::new();
+        for face in info.fonts() {
+            if let Some(blob) = face.load(Some(&mut self.fcx.source_cache)) {
+                let raw: &[u8] = blob.as_ref();
+                if !bytes.iter().any(|existing: &Vec<u8>| existing.as_slice() == raw) {
+                    bytes.push(raw.to_vec());
+                }
+            }
+        }
+        bytes
+    }
+
     /// Registers font data (TTF/OTF, or every face of a TTC/OTC). Returns the family names added.
     pub fn register_font_data(&mut self, bytes: Vec<u8>) -> Vec<String> {
         self.register_blob(Blob::new(Arc::new(bytes)), None)

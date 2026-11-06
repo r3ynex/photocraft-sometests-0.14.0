@@ -5607,6 +5607,7 @@ dependencies = [
  "toml",
  "unicode-bidi",
  "web-time",
+ "zip",
  "winsafe",
 ]
 
