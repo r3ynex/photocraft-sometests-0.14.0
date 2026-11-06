@@ -321,6 +321,23 @@ pub fn apply_char_props(s: &mut CharStyle, p: &Value) -> bool {
         s.tracking = v;
         hit(true);
     }
+    // Freeform offsets are absolute text-space pixels, not font metrics. Keeping
+    // these in the character runs means UTF-8 edits shift them with their glyphs.
+    for (key, field) in [
+        ("freeformX", &mut s.freeform_x),
+        ("freeformY", &mut s.freeform_y),
+        ("freeformAngle", &mut s.freeform_angle),
+        ("freeformScale", &mut s.freeform_scale),
+    ] {
+        if let Some(v) = f32p(p, key).filter(|v| v.is_finite()) {
+            *field = match key {
+                "freeformX" | "freeformY" => v.clamp(-100_000.0, 100_000.0),
+                "freeformAngle" => v.clamp(-3600.0, 3600.0),
+                _ => v.clamp(0.1, 20.0),
+            };
+            hit(true);
+        }
+    }
     match p.get("leading") {
         Some(Value::Null) => {
             s.leading_pt = None;
@@ -621,6 +638,23 @@ pub fn replace_text(t: &mut TextLayer, a: usize, b: usize, new: &str) {
     }
     t.runs = cr.into_iter().map(|(len, style)| TextRun { len, style }).collect();
     t.paragraphs = pr.into_iter().map(|(len, style)| ParagraphRun { len, style }).collect();
+    // Inserted characters inherit typography, but not a neighbour's manually
+    // dragged/turned/scaled position. A replacement keeps the transform of its
+    // first overwritten character; any extra replacement characters are new.
+    // Byte ranges (not code-point counts) keep Cyrillic and emoji aligned.
+    let freeform_reset_start = if b > a {
+        a + new.chars().next().map_or(0, char::len_utf8)
+    } else {
+        a
+    };
+    if freeform_reset_start < a + new.len() {
+        style_range(t, freeform_reset_start, a + new.len(), &|st| {
+            st.freeform_x = 0.0;
+            st.freeform_y = 0.0;
+            st.freeform_angle = 0.0;
+            st.freeform_scale = 1.0;
+        });
+    }
     t.sync_summary();
 }
 
@@ -926,7 +960,7 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "Edit Type",
             menu: &[],
             shortcut: None,
-            params: r##"{"layer":id?,"text":str? (replace all, styles kept),"replace":{"start":char,"end":char,"text":str}?,"runs":[{"start":char,"end":char,…character keys}]?,"box":[x,y,w,h]? (to paragraph text),"point":[x,y]? (to point text),"move":[dx,dy]?,"transform":[a,b,c,d,e,f]?,"antialias":"none|sharp|crisp|strong|smooth"?,"name":str?,"kerning":1/1000em|"metrics"|"optical"|"off"? (with "range":[startChar,endChar]?, default all),"kernPair":{"at":caretChar,"by":1/1000em}? (Alt+←/→: the pair before the caret becomes manual, its current kerning + by)}"##,
+            params: r##"{"layer":id?,"text":str? (replace all, styles kept),"replace":{"start":char,"end":char,"text":str}?,"runs":[{"start":char,"end":char,"freeformX":px?,"freeformY":px?,"freeformAngle":deg?,"freeformScale":factor?,…character keys}]?,"box":[x,y,w,h]? (to paragraph text),"point":[x,y]? (to point text),"move":[dx,dy]?,"transform":[a,b,c,d,e,f]?,"antialias":"none|sharp|crisp|strong|smooth"?,"name":str?,"kerning":1/1000em|"metrics"|"optical"|"off"? (with "range":[startChar,endChar]?, default all),"kernPair":{"at":caretChar,"by":1/1000em}? (Alt+←/→: the pair before the caret becomes manual, its current kerning + by)}"##,
             enabled: has_doc,
             journal: true,
             run: |s, p| {
