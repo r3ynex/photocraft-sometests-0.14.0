@@ -135,7 +135,7 @@ pub fn decode(bytes: &[u8]) -> Result<FontPack, String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| format!("Invalid .pcraftfp ZIP archive: {e}"))?;
     let manifest = {
-        let mut entry = zip.by_name("manifest.json")
+        let entry = zip.by_name("manifest.json")
             .map_err(|_| "Font pack has no manifest.json".to_string())?;
         if entry.size() as usize > MAX_MANIFEST_BYTES {
             return Err("Font pack manifest is too large".into());
@@ -179,7 +179,7 @@ pub fn decode(bytes: &[u8]) -> Result<FontPack, String> {
             {
                 return Err("Unsafe or duplicate font entry path in .pcraftfp".into());
             }
-            let mut entry = zip.by_name(&path).map_err(|e| format!("Missing font file {path}: {e}"))?;
+            let entry = zip.by_name(&path).map_err(|e| format!("Missing font file {path}: {e}"))?;
             if entry.size() as usize > MAX_FONT_BYTES {
                 return Err("Font binary exceeds the 32 MiB limit".into());
             }
