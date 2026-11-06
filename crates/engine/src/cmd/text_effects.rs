@@ -120,7 +120,7 @@ fn apply(t: &mut TextLayer, (start, end): (usize, usize), o: Options) {
                     style.size_pt = lerp(initial, destination, progress);
                 }
                 Mode::Alternate => {
-                    let large = nth % 2 == 0;
+                    let large = nth.is_multiple_of(2);
                     let pct = if large { o.max_percent } else { o.min_percent };
                     style.size_pt = (style.size_pt * pct / 100.0).clamp(TYPE_SIZE_MIN_PT as f32, TYPE_SIZE_MAX_PT as f32);
                     style.rotation_deg = if large { o.max_rotation } else { o.min_rotation };
