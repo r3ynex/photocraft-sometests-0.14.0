@@ -422,9 +422,11 @@ fn settings_tab(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             ui.radio_value(&mut app.ui.tool_options.pen_mouse_mode, crate::pen_mouse_guard::Mode::Contact, tl!("Pen touching"));
         });
         ui.label(
-            egui::RichText::new(tl!("Windows Ink: mouse movement is ignored inside PhotoCraft. Buttons and wheel still work. The filter automatically resets when pen input stops."))
-                .weak()
-                .small(),
+            egui::RichText::new(tl!(
+                "Windows Ink: mouse movement is ignored inside PhotoCraft. Buttons and wheel still work. The filter automatically resets when pen input stops."
+            ))
+            .weak()
+            .small(),
         );
     }
     commit_gesture(app, ui.ctx(), &before, &b);
