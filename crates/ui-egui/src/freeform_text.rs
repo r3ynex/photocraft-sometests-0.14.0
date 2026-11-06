@@ -76,7 +76,7 @@ fn handles(app: &mut PhotocraftApp) -> Vec<Handle> {
         if cluster.range.start >= text.len() || !text.is_char_boundary(cluster.range.start) {
             continue;
         }
-        if matches!(text[cluster.range.start..].chars().next(), Some('\\n' | '\\r') | None) {
+        if matches!(text[cluster.range.start..].chars().next(), Some('\n' | '\r') | None) {
             continue;
         }
         let Some(line) = layout.lines.get(cluster.line) else { continue };
