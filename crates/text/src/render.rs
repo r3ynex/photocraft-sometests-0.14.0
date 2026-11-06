@@ -200,20 +200,23 @@ fn draw_pass(layout: &TextLayout, transform: &Xform, sink: &mut impl LineSink, o
         };
         let coords: Vec<NormalizedCoord> = face.coords.iter().map(|&c| NormalizedCoord::from_bits(c)).collect();
         let mut glyph = glyph_xform(layout, g, face.skew_deg);
-        // Character rotation is baked into each glyph's outline transform; the
-        // layer stays a normal editable Type layer (not a transformed raster).
-        if st.rotation_deg.abs() > f32::EPSILON {
+        // Both the Text Library's character rotation and Freeform Text are
+        // non-destructive glyph-outline transforms: the original text, runs,
+        // caret positions, font and paragraph layout remain editable.
+        let angle = st.rotation_deg.clamp(-30.0, 30.0) + st.freeform_angle;
+        let scale = st.freeform_scale.clamp(0.1, 20.0);
+        if angle.abs() > f32::EPSILON || (scale - 1.0).abs() > f32::EPSILON || st.freeform_x != 0.0 || st.freeform_y != 0.0 {
             let cx = glyph_center(layout, g, &font, face.size_px, &coords);
-            // The visual centre is approximately half an em above the baseline.
+            // Keep one pivot for rotation and scaling, regardless of the offset.
             let cy = f64::from(g.y) - f64::from(face.size_px) * 0.4;
-            let radians = f64::from(st.rotation_deg.clamp(-30.0, 30.0)).to_radians();
-            let (sin, cos) = radians.sin_cos();
-            let rotate = Xform([
-                cos, sin, -sin, cos,
-                cx - cos * cx + sin * cy,
-                cy - sin * cx - cos * cy,
+            let (sin, cos) = f64::from(angle).to_radians().sin_cos();
+            let (a, b) = (cos * f64::from(scale), sin * f64::from(scale));
+            let transform = Xform([
+                a, b, -b, a,
+                cx - a * cx + b * cy + f64::from(st.freeform_x),
+                cy - b * cx - a * cy + f64::from(st.freeform_y),
             ]);
-            glyph = rotate.mul(&glyph);
+            glyph = transform.mul(&glyph);
         }
         // Type on a path moves each glyph rigidly: turned to the curve at its centre.
         let mut bend = warp;
