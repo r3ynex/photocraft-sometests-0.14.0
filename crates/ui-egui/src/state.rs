@@ -459,10 +459,6 @@ pub struct UiState {
     pub brush_section: usize,
     #[serde(default)]
     pub brush_tab: usize,
-    /// Windows: ignore mouse motion inside PhotoCraft while a painting pen is active.
-    /// This belongs to the workspace, not the brush preset.
-    #[serde(default)]
-    pub pen_mouse_mode: crate::pen_mouse_guard::Mode,
     /// Brushes panel: collapsed groups and the search filter.
     #[serde(default)]
     pub brushes_panel: crate::brush_panel::BrushesPanelState,
@@ -620,7 +616,6 @@ impl Default for UiState {
             color_panel_synced: None,
             brush_section: 0,
             brush_tab: 0,
-            pen_mouse_mode: Default::default(),
             brushes_panel: Default::default(),
             text_library: Default::default(),
             selection_mode: 0,
