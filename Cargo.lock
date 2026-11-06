@@ -5101,61 +5101,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft"
-version = "0.20.1"
-dependencies = [
- "arboard",
- "async-io",
- "base64 0.22.1",
- "blake3",
- "chrono",
- "clap",
- "core-graphics2",
- "craft-update",
- "dispatch2",
- "eframe",
- "egui",
- "fmv-macos-events",
- "futures-lite",
- "log",
- "muda",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "open",
- "photocraft-automation",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-io",
- "photocraft-raster",
- "photocraft-tablet",
- "photocraft-ui-egui",
- "plist",
- "resvg",
- "rfd",
- "ron",
- "roxmltree 0.21.1",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "winit",
- "winresource",
- "winsafe",
- "wl-clipboard-rs",
- "x11rb",
- "xcap",
- "zbus",
-]
-
-[[package]]
 name = "photocraft-affinity"
 version = "0.20.1"
 dependencies = [
@@ -5527,6 +5472,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "photocraft-reica"
+version = "0.20.1"
+dependencies = [
+ "arboard",
+ "async-io",
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "clap",
+ "core-graphics2",
+ "craft-update",
+ "dispatch2",
+ "eframe",
+ "egui",
+ "fmv-macos-events",
+ "futures-lite",
+ "log",
+ "muda",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "open",
+ "photocraft-automation",
+ "photocraft-cms",
+ "photocraft-codecs",
+ "photocraft-color",
+ "photocraft-compose",
+ "photocraft-doc",
+ "photocraft-engine",
+ "photocraft-format",
+ "photocraft-geom",
+ "photocraft-io",
+ "photocraft-raster",
+ "photocraft-tablet",
+ "photocraft-ui-egui",
+ "plist",
+ "resvg",
+ "rfd",
+ "ron",
+ "roxmltree 0.21.1",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "winit",
+ "winresource",
+ "winsafe",
+ "wl-clipboard-rs",
+ "x11rb",
+ "xcap",
+ "zbus",
+]
+
+[[package]]
 name = "photocraft-tablet"
 version = "0.20.1"
 dependencies = [
@@ -5607,8 +5607,8 @@ dependencies = [
  "toml",
  "unicode-bidi",
  "web-time",
- "zip",
  "winsafe",
+ "zip",
 ]
 
 [[package]]
