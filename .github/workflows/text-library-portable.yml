@@ -1,4 +1,4 @@
-name: Text Library + Editable Text Effects Windows Portable
+name: REICA MangaLab Windows Portable
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - feature/text-library-v02
       - feature/text-effects-editable
       - feature/freeform-text-20261106
+      - feature/reica-mangalab-20261106
   workflow_dispatch:
 
 permissions:
@@ -26,7 +27,7 @@ jobs:
       CARGO_PROFILE_RELEASE_LTO: "false"
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
     steps:
-      - name: Checkout PhotoCraft with Text Library
+      - name: Checkout RE:ICA Manga Lab
         uses: actions/checkout@v4
 
       - name: Install stable Rust (minimum 1.95)
@@ -45,33 +46,34 @@ jobs:
 
       - name: Compile portable release executable
         shell: pwsh
-        run: cargo build --release --locked -p photocraft
+        run: cargo build --release --locked -p photocraft-reica
 
       - name: Assemble portable ZIP
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $exe = 'target/release/photocraft.exe'
-          if (!(Test-Path -LiteralPath $exe)) { throw 'Expected photocraft.exe not found' }
-          New-Item -ItemType Directory -Force -Path 'dist/PhotoCraft-Text-Library' | Out-Null
-          Copy-Item -LiteralPath $exe -Destination 'dist/PhotoCraft-Text-Library/photocraft.exe'
+          $exe = 'target/release/photocraft-reica.exe'
+          if (!(Test-Path -LiteralPath $exe)) { throw 'Expected photocraft-reica.exe not found' }
+          New-Item -ItemType Directory -Force -Path 'dist/REICA-MangaLab' | Out-Null
+          Copy-Item -LiteralPath $exe -Destination 'dist/REICA-MangaLab/photocraft-reica.exe'
           @'
-          PhotoCraft + Text Library + editable Freeform Text
+          PhotoCraft [RE:ICA Edition] + RE:ICA Manga Lab + editable Freeform Text
           Windows x64 portable (unsigned, custom build)
-          Double-click photocraft.exe to run; no installer required.
+          Double-click photocraft-reica.exe to run; no installer required.
           Use the Type tool's Freeform Text toggle: drag dots to move, rings to rotate, squares to scale.
+          Shift-click handles to select multiple characters and transform the group.
           Shift snaps rotation to 15 degrees. Alt-click a handle to reset a character.
           This executable is a community fork, not an official PhotoCraft release.
-          '@ | Set-Content -Encoding UTF8 'dist/PhotoCraft-Text-Library/README.txt'
-          if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/PhotoCraft-Text-Library/' }
-          if (Test-Path -LiteralPath 'LICENSE-APACHE') { Copy-Item LICENSE-APACHE 'dist/PhotoCraft-Text-Library/' }
-          Compress-Archive -Path 'dist/PhotoCraft-Text-Library' -DestinationPath 'dist/PhotoCraft-Text-Library-win64.zip' -Force
-          Get-Item 'dist/PhotoCraft-Text-Library-win64.zip' | Select-Object Name,Length
+          '@ | Set-Content -Encoding UTF8 'dist/REICA-MangaLab/README.txt'
+          if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/REICA-MangaLab/' }
+          if (Test-Path -LiteralPath 'LICENSE-APACHE') { Copy-Item LICENSE-APACHE 'dist/REICA-MangaLab/' }
+          Compress-Archive -Path 'dist/REICA-MangaLab' -DestinationPath 'dist/REICA-MangaLab-win64.zip' -Force
+          Get-Item 'dist/REICA-MangaLab-win64.zip' | Select-Object Name,Length
 
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PhotoCraft-Text-Library-Windows-Portable
-          path: dist/PhotoCraft-Text-Library-win64.zip
+          name: REICA-MangaLab-Windows-Portable
+          path: dist/REICA-MangaLab-win64.zip
           if-no-files-found: error
           retention-days: 30
