@@ -1,0 +1,40 @@
+name: REICA One-Time Upstream Integration
+on:
+  push:
+    branches:
+      - feature/reica-mangalab-upstream-20261106
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reica-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'chore(reica): prepare upstream integration workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out latest PhotoCraft upstream base
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Merge REICA MangaLab and preserve new upstream changes on conflict
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name "REICA Upstream Integration"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin '+refs/heads/feature/reica-mangalab-20261106:refs/remotes/origin/feature/reica-mangalab-20261106'
+          git merge --no-ff --no-commit -s ort -X ours origin/feature/reica-mangalab-20261106
+          git status --short
+          git diff --check
+          git diff --cached --check
+          git commit -m "merge(reica): port MangaLab onto PhotoCraft upstream 2026-11-06"
+          git push origin HEAD:refs/heads/feature/reica-mangalab-upstream-20261106
+      - name: Check Rust UI integration
+        shell: bash
+        run: cargo check --locked -p photocraft-ui-egui
