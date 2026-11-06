@@ -1,4 +1,4 @@
-name: REICA One-Time Upstream Integration
+name: REICA Upstream Port Verification
 on:
   push:
     branches:
@@ -9,44 +9,33 @@ permissions:
   contents: write
 
 concurrency:
-  group: reica-upstream-sync
+  group: reica-upstream-verification
   cancel-in-progress: false
 
 jobs:
-  integrate:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out latest PhotoCraft upstream base
+      - name: Check out merged upstream + MangaLab
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: true
-      - name: Merge REICA MangaLab and preserve new upstream changes on conflict
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+      - name: Regenerate lock file after merge and commit it
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           git config user.name "REICA Upstream Integration"
           git config user.email "actions@users.noreply.github.com"
-          git fetch origin '+refs/heads/feature/reica-mangalab-20261106:refs/remotes/origin/feature/reica-mangalab-20261106'
-          # PhotoCraft moved the old Type tool to tools/type_tool.rs.
-          # The removed legacy copy must not be resurrected; port the few
-          # RE:ICA Type-tool UI hooks into the new location separately.
-          if ! git merge --no-ff --no-commit -s ort -X ours origin/feature/reica-mangalab-20261106; then
-            if git ls-files -u | grep -q 'crates/ui-egui/src/type_tool.rs'; then
-              git rm -f -- crates/ui-egui/src/type_tool.rs
-            fi
-            if [ -n "$(git ls-files -u)" ]; then
-              echo "Unresolved merge conflicts remain:" >&2
-              git ls-files -u
-              exit 1
-            fi
+          cargo metadata --format-version 1 --no-deps > /dev/null
+          if ! git diff --quiet -- Cargo.lock; then
+            git add Cargo.lock
+            git commit -m "build(reica): regenerate Cargo.lock for merged upstream"
+            git push origin HEAD:refs/heads/feature/reica-mangalab-upstream-20261106
           fi
-          git status --short
-          git diff --check
-          # Markdown uses two trailing spaces for intentional line breaks.
-          git diff --cached --check -- . ':(exclude)REICA-MANGALAB.md'
-          git commit -m "merge(reica): port MangaLab onto PhotoCraft upstream 2026-11-06"
-          git push origin HEAD:refs/heads/feature/reica-mangalab-upstream-20261106
-      - name: Check Rust UI integration
-        shell: bash
+      - name: Check MangaLab UI against new PhotoCraft
         run: cargo check --locked -p photocraft-ui-egui
