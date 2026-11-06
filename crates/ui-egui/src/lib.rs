@@ -198,6 +198,7 @@ pub use input::shortcuts;
 use input::single_line_drag;
 pub use input::spring_tools;
 pub use input::stylus;
+pub use input::pen_mouse_guard;
 use input::tool_shortcuts;
 pub use input::touch_twins;
 pub use menus::enable_rules;
@@ -703,6 +704,8 @@ pub struct PhotocraftApp {
     pub(crate) allow_close: bool,
     /// Pen pressure/tilt from the platform (see `stylus`).
     pub stylus: stylus::Stylus,
+    /// Only filters PhotoCraft events, never the system mouse.
+    pub(crate) pen_mouse_filter: pen_mouse_guard::Filter,
     control_click: control_click::ControlClick,
     /// Run long commands and file opens as background jobs with progress and Cancel (#210; see
     /// `jobs_ui`). The desktop app turns it on; off (the default), everything runs inline as
