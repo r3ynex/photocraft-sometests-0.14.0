@@ -282,7 +282,7 @@ impl eframe::App for PhotocraftApp {
             let mode = if self.ui.tool.is_brushlike() {
                 self.ui.tool_options.pen_mouse_mode
             } else {
-                pen_mouse_guard::Mode::Off
+                crate::pen_mouse_guard::Mode::Off
             };
             if raw_input.focused {
                 self.pen_mouse_filter.filter(&mut raw_input.events, mode, raw_input.time.unwrap_or(0.0));
