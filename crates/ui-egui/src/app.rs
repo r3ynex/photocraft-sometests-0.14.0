@@ -208,6 +208,7 @@ impl PhotocraftApp {
             held_preset_import: None,
             allow_close: false,
             stylus: Default::default(),
+            pen_mouse_filter: Default::default(),
             control_click: Default::default(),
             background_jobs: false,
             min_frame_ms: None,
@@ -270,6 +271,24 @@ impl eframe::App for PhotocraftApp {
         // Leave Ctrl+whole-notch mouse scrolling alone, and honour the pinch preference.
         if cfg!(any(target_os = "windows", target_os = "linux")) && self.session.prefs().enhanced_controls.zoom_with_trackpad_pinch {
             wheel_nav::fold_legacy_pinch(ctx, raw_input);
+        }
+        // Native Windows Ink input, before automation inserts synthetic mouse events.
+        // This ignores unrelated mouse POINTER MOVEMENT in the editor only, never
+        // button clicks, scroll events, keyboard input or the Windows cursor.
+        // Releasing the pen, leaving its proximity, losing focus or changing
+        // tools resets the filter; it cannot lock the system pointer.
+        #[cfg(target_os = "windows")]
+        {
+            let mode = if self.ui.tool.is_brushlike() {
+                self.ui.tool_options.pen_mouse_mode
+            } else {
+                pen_mouse_guard::Mode::Off
+            };
+            if raw_input.focused {
+                self.pen_mouse_filter.filter(&mut raw_input.events, mode, raw_input.time.unwrap_or(0.0));
+            } else {
+                self.pen_mouse_filter.reset();
+            }
         }
         self.inject_synthetic(ctx, raw_input);
         // After the control channel's own events (`ui.type`) join the OS's, before any widget.

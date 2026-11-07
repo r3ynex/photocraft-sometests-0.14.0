@@ -408,6 +408,34 @@ fn settings_tab(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             }
         });
     });
+    // The setting is not part of brush presets or the paint engine: it is
+    // deliberately a local-only input option with a fail-safe timeout.
+    ui.add_space(8.0);
+    widgets::hairline(ui);
+    ui.add_space(6.0);
+    let mut enabled = app.ui.tool_options.pen_mouse_mode != crate::pen_mouse_guard::Mode::Off;
+    if widgets::checkbox(ui, &mut enabled, tl!("Ignore mouse movement while using a pen")).changed() {
+        app.ui.tool_options.pen_mouse_mode = if enabled { crate::pen_mouse_guard::Mode::Hover } else { crate::pen_mouse_guard::Mode::Off };
+        // Switching the mode must never keep the old pen-proximity state.
+        app.pen_mouse_filter.reset();
+    }
+    if enabled {
+        ui.horizontal(|ui| {
+            if ui.radio_value(&mut app.ui.tool_options.pen_mouse_mode, crate::pen_mouse_guard::Mode::Hover, tl!("Pen hovering")).changed() {
+                app.pen_mouse_filter.reset();
+            }
+            if ui.radio_value(&mut app.ui.tool_options.pen_mouse_mode, crate::pen_mouse_guard::Mode::Contact, tl!("Pen touching")).changed() {
+                app.pen_mouse_filter.reset();
+            }
+        });
+        ui.label(
+            egui::RichText::new(tl!(
+                "Windows Ink: only mouse motion inside PhotoCraft is ignored. Pen motion, mouse buttons and wheel still work. Automatically releases when the pen leaves."
+            ))
+            .weak()
+            .small(),
+        );
+    }
     commit_gesture(app, ui.ctx(), &before, &b);
 }
 

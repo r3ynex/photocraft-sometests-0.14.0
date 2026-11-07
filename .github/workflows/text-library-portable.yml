@@ -7,6 +7,7 @@ on:
       - feature/text-effects-editable
       - feature/freeform-text-20261106
       - feature/reica-mangalab-20261106
+      - feature/reica-mangalab-upstream-20261106
   workflow_dispatch:
 
 permissions:
@@ -44,6 +45,10 @@ jobs:
         shell: pwsh
         run: cargo test --locked -p photocraft-engine freeform_text_tests --lib
 
+      - name: Test pen/mouse motion safety and automatic release
+        shell: pwsh
+        run: cargo test --locked -p photocraft-ui-egui pen_mouse_guard::tests --lib
+
       - name: Test MangaLab multi-glyph transforms
         shell: pwsh
         run: cargo test --locked -p photocraft-ui-egui freeform_text::tests --lib
@@ -72,6 +77,8 @@ jobs:
           Shift-click handles to select multiple characters and transform the group.
           Shift snaps rotation to 15 degrees. Alt-click a handle to reset a character.
           MangaLab Fonts tab can export/import complete .pcraftfp ZIP archives with original font files.
+          Brush Settings: optional Ignore mouse movement while using a pen (Windows Ink; Hover/Contact).
+          Freeform Text controllers adapt to the visible glyph size and zoom, with safe size limits.
           This executable is a community fork, not an official PhotoCraft release.
           '@ | Set-Content -Encoding UTF8 'dist/REICA-MangaLab/README.txt'
           if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/REICA-MangaLab/' }

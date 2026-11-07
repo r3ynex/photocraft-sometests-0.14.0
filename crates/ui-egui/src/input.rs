@@ -6,6 +6,8 @@ pub(super) mod layout_keys;
 pub mod nudge_bundle;
 pub(super) mod opacity_keys;
 pub(super) mod page_keys;
+/// Local Windows Ink pen/mouse motion filter; never touches the system cursor.
+pub mod pen_mouse_guard;
 pub(super) mod scrub_wrap;
 pub mod shortcut_dispatch;
 pub mod shortcuts;

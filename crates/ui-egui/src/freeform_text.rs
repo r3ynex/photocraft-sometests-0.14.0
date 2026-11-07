@@ -12,8 +12,29 @@ use serde_json::json;
 use crate::PhotocraftApp;
 use crate::canvas::{ToolEvent, ViewXform};
 
-const RING: f32 = 13.0;
-const SIZE_HANDLE: f32 = 19.0;
+/// Screen-space controller dimensions are derived from the *visible* em height:
+/// font size × document DPI × character scale × layer transform × canvas zoom.
+/// Clamp them to keep tiny text selectable and huge text unobstructed.
+#[derive(Clone, Copy, Debug)]
+struct HandleMetrics {
+    ring: f32,
+    offset: f32,
+    dot: f32,
+    square: f32,
+    ring_hit: f32,
+}
+
+fn handle_metrics(visible_em: f32) -> HandleMetrics {
+    let em = if visible_em.is_finite() { visible_em.max(0.0) } else { 0.0 };
+    let ring = (em * 0.43).clamp(10.0, 40.0);
+    HandleMetrics {
+        ring,
+        offset: ring * 1.46,
+        dot: (ring * 0.28).clamp(3.0, 7.0),
+        square: (ring * 0.55).clamp(7.0, 18.0),
+        ring_hit: (ring * 0.19).clamp(4.0, 7.0),
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HandleKind {
@@ -60,6 +81,10 @@ struct Handle {
     center: [f64; 2],
     transform: Affine,
     style: CharStyle,
+    /// Document-space em-axis vector, after the layer transform.
+    /// Screen scaling (including camera zoom, rotation and aspect) is applied
+    /// at draw/hit-test time, so neither can disagree on handle positions.
+    em_axis: [f64; 2],
 }
 
 fn selected_type(app: &PhotocraftApp) -> Option<LayerId> {
@@ -110,6 +135,10 @@ fn handles(app: &mut PhotocraftApp) -> Vec<Handle> {
             f64::from(tx + style.freeform_x),
             f64::from(ty + style.freeform_y),
         ));
+        let em = (style.size_pt.abs() * layout.px_per_pt * style.freeform_scale.abs()).max(0.0);
+        let (ex, ey) = layout.to_text(0.0, em);
+        let origin = transform.apply(Point::new(0.0, 0.0));
+        let extent = transform.apply(Point::new(f64::from(ex), f64::from(ey)));
         out.push(Handle {
             layer: id,
             index: photocraft_text::char_index(&text, cluster.range.start),
@@ -117,6 +146,7 @@ fn handles(app: &mut PhotocraftApp) -> Vec<Handle> {
             center: [p.x, p.y],
             transform,
             style,
+            em_axis: [extent.x - origin.x, extent.y - origin.y],
         });
     }
     out
@@ -126,8 +156,13 @@ fn screen(xf: &ViewXform, p: [f64; 2]) -> Pos2 {
     xf.to_screen(p[0] as f32, p[1] as f32)
 }
 
-fn size_pos(p: Pos2) -> Pos2 {
-    p + vec2(SIZE_HANDLE, -SIZE_HANDLE)
+fn metrics_for(xf: &ViewXform, handle: &Handle) -> HandleMetrics {
+    let axis = vec2(handle.em_axis[0] as f32, handle.em_axis[1] as f32);
+    handle_metrics(xf.map_vec(axis).length())
+}
+
+fn size_pos(p: Pos2, metrics: HandleMetrics) -> Pos2 {
+    p + vec2(metrics.offset, -metrics.offset)
 }
 
 pub fn draw_overlay(app: &mut PhotocraftApp, painter: &Painter, xf: &ViewXform) {
@@ -137,15 +172,16 @@ pub fn draw_overlay(app: &mut PhotocraftApp, painter: &Painter, xf: &ViewXform) 
     let current_handles = handles(app);
     for h in &current_handles {
         let p = screen(xf, h.center);
+        let metrics = metrics_for(xf, h);
         let selected_here = selected.as_ref().is_some_and(|s| s.layer == h.layer.0 && s.indices.contains(&h.index))
             || active.as_ref().is_some_and(|(layer, ids)| *layer == h.layer.0 && ids.contains(&h.index));
         let color = if selected_here { Color32::from_rgb(255, 185, 71) } else { Color32::from_rgb(71, 175, 255) };
-        painter.circle_stroke(p, RING, Stroke::new(if selected_here { 2.0 } else { 1.2 }, color));
-        painter.circle_filled(p, 4.0, Color32::WHITE);
-        painter.circle_stroke(p, 4.0, Stroke::new(1.0, color));
-        let corner = size_pos(p);
-        painter.line_segment([p + vec2(9.0, -9.0), corner], Stroke::new(1.0, color));
-        let r = egui::Rect::from_center_size(corner, vec2(7.0, 7.0));
+        painter.circle_stroke(p, metrics.ring, Stroke::new(if selected_here { 2.0 } else { 1.2 }, color));
+        painter.circle_filled(p, metrics.dot, Color32::WHITE);
+        painter.circle_stroke(p, metrics.dot, Stroke::new(1.0, color));
+        let corner = size_pos(p, metrics);
+        painter.line_segment([p + vec2(metrics.ring * 0.7, -metrics.ring * 0.7), corner], Stroke::new(1.0, color));
+        let r = egui::Rect::from_center_size(corner, vec2(metrics.square, metrics.square));
         painter.rect_filled(r, 1.0, Color32::WHITE);
         painter.rect_stroke(r, 1.0, Stroke::new(1.0, color), egui::StrokeKind::Inside);
     }
@@ -168,14 +204,15 @@ fn hit(app: &mut PhotocraftApp, xf: &ViewXform, pointer: Pos2) -> Option<(Handle
     let mut best: Option<(f32, Handle, HandleKind)> = None;
     for h in handles(app) {
         let p = screen(xf, h.center);
+        let metrics = metrics_for(xf, &h);
         let d = p.distance(pointer);
-        let s = size_pos(p).distance(pointer);
-        let candidate = if d <= 5.5 {
+        let s = size_pos(p, metrics).distance(pointer);
+        let candidate = if d <= metrics.dot + 2.5 {
             Some((d, HandleKind::Move))
-        } else if s <= 6.0 {
+        } else if s <= metrics.square * 0.5 + 3.5 {
             Some((s, HandleKind::Scale))
-        } else if (d - RING).abs() <= 4.0 {
-            Some(((d - RING).abs() + 1.0, HandleKind::Rotate))
+        } else if (d - metrics.ring).abs() <= metrics.ring_hit {
+            Some(((d - metrics.ring).abs() + 1.0, HandleKind::Rotate))
         } else {
             None
         };
@@ -363,6 +400,30 @@ mod tests {
         DragTarget {
             index, end_index: index + 1, center: [x, 0.0],
             before: CharStyle::default(),
+        }
+    }
+
+    #[test]
+    fn glyph_controller_tracks_visible_font_size_but_stays_usable() {
+        let small = handle_metrics(12.0);
+        let medium = handle_metrics(60.0);
+        let large = handle_metrics(150.0);
+        assert!(small.ring < medium.ring && medium.ring < large.ring);
+        assert!(small.square < medium.square && medium.square < large.square);
+        assert_eq!(handle_metrics(0.0).ring, 10.0);
+        assert_eq!(handle_metrics(500.0).ring, 40.0);
+        assert!(handle_metrics(f32::NAN).ring.is_finite());
+    }
+
+    #[test]
+    fn ring_and_scale_hit_regions_follow_the_same_calculated_metrics() {
+        for em in [8.0, 12.0, 30.0, 100.0, 300.0] {
+            let m = handle_metrics(em);
+            let centre = egui::pos2(100.0, 100.0);
+            let size = size_pos(centre, m);
+            assert!((size - centre).length() > m.ring);
+            assert!(m.ring_hit >= 4.0);
+            assert!(m.square >= 7.0);
         }
     }
 
