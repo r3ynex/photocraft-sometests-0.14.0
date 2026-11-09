@@ -1,0 +1,86 @@
+name: REICA MangaLab — merge PhotoCraft upstream 2026-11-09
+on:
+  push:
+    branches:
+      - feature/reica-mangalab-upstream-20261109
+    paths:
+      - .github/workflows/reica-upstream-integration-20261109.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Check out dedicated REICA update branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Install current Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+      - name: Merge newest public PhotoCraft source without overwriting REICA branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "REICA Upstream Integration"
+          git config user.email "actions@users.noreply.github.com"
+          git remote add upstream https://github.com/storytold/photocraft.git
+          git fetch --no-tags upstream main
+          echo "Upstream source: $(git rev-parse FETCH_HEAD)"
+          if git merge-base --is-ancestor FETCH_HEAD HEAD; then
+            echo "Already on upstream main"
+            exit 0
+          fi
+
+          # Preserve custom REICA edits on genuinely conflicting hunks.
+          # Upstream changes to all other hunks/files are retained.
+          git merge --no-commit --no-ff --strategy=ort -X ours FETCH_HEAD || true
+          if git ls-files -u | grep -q .; then
+            echo "Resolving non-text conflicts in favor of REICA custom files:"
+            while IFS= read -r -d '' file; do
+              echo "  $file"
+              if git cat-file -e ":2:$file" 2>/dev/null; then
+                git checkout --ours -- "$file"
+                git add -- "$file"
+              elif git cat-file -e ":3:$file" 2>/dev/null; then
+                git checkout --theirs -- "$file"
+                git add -- "$file"
+              else
+                git rm -f -- "$file"
+              fi
+            done < <(git diff --name-only --diff-filter=U -z)
+          fi
+          test -z "$(git ls-files -u)"
+          git diff --cached --check
+          if test -f .git/MERGE_HEAD; then
+            git -c user.name="REICA Upstream Integration" commit -m "merge: import latest PhotoCraft upstream into REICA MangaLab"
+          fi
+          git log -1 --format='%h %s'
+      - name: Refresh dependencies after upstream merge
+        run: cargo metadata --format-version 1 > /dev/null
+      - name: Check REICA app, UI and engine
+        run: cargo check -p photocraft-reica -p photocraft-ui-egui -p photocraft-engine
+      - name: Run MangaLab regression tests
+        shell: bash
+        run: |
+          cargo test -p photocraft-ui-egui pen_mouse_guard::tests --lib
+          cargo test -p photocraft-ui-egui freeform_text::tests --lib
+          cargo test -p photocraft-ui-egui font_pack::tests --lib
+          cargo test -p photocraft-engine freeform_text_tests --lib
+      - name: Publish tested merge to the dedicated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "REICA Upstream Integration"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet -- Cargo.lock; then
+            git add Cargo.lock
+            git commit -m "build: refresh Cargo.lock after PhotoCraft update"
+          fi
+          git push origin HEAD:refs/heads/feature/reica-mangalab-upstream-20261109
