@@ -62,6 +62,8 @@ jobs:
           fi
       - name: Check text UI and engine
         run: cargo check -p photocraft-ui-egui -p photocraft-engine -p photocraft-reica
+      - name: Test page grouping and non-destructive bubble cleaning
+        run: cargo test -p photocraft-engine manga_pages_cmds --lib
       - name: Include rustfmt corrections in verified merge
         run: |
           git add -u
