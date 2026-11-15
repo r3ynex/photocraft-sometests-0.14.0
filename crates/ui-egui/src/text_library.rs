@@ -87,17 +87,7 @@ pub struct PageSettings {
 
 impl Default for PageSettings {
     fn default() -> Self {
-        Self {
-            first: 1,
-            reverse: false,
-            selected_only: true,
-            auto_clean: true,
-            round: true,
-            rectangle: true,
-            min_size: 35,
-            threshold: 225,
-            margin: 3,
-        }
+        Self { first: 1, reverse: false, selected_only: true, auto_clean: true, round: true, rectangle: true, min_size: 35, threshold: 225, margin: 3 }
     }
 }
 
@@ -166,17 +156,11 @@ fn active_group(app: &PhotocraftApp) -> String {
     if group.is_empty() || group == DEFAULT_FONT_GROUP {
         return DEFAULT_FONT_GROUP.to_string();
     }
-    if prefs.text_library_groups.iter().any(|g| g.name == group) {
-        group.to_string()
-    } else {
-        DEFAULT_FONT_GROUP.to_string()
-    }
+    if prefs.text_library_groups.iter().any(|g| g.name == group) { group.to_string() } else { DEFAULT_FONT_GROUP.to_string() }
 }
 
 fn font_groups(app: &PhotocraftApp) -> Vec<String> {
-    std::iter::once(DEFAULT_FONT_GROUP.to_string())
-        .chain(app.session.prefs().text_library_groups.iter().map(|g| g.name.clone()))
-        .collect()
+    std::iter::once(DEFAULT_FONT_GROUP.to_string()).chain(app.session.prefs().text_library_groups.iter().map(|g| g.name.clone())).collect()
 }
 
 fn fonts_in_group(app: &PhotocraftApp, name: &str) -> Vec<String> {
@@ -184,8 +168,7 @@ fn fonts_in_group(app: &PhotocraftApp, name: &str) -> Vec<String> {
     if name == DEFAULT_FONT_GROUP {
         return p.text_library_fonts.clone();
     }
-    p.text_library_groups.iter().find(|g| g.name == name)
-        .map_or_else(Vec::new, |g| g.fonts.clone())
+    p.text_library_groups.iter().find(|g| g.name == name).map_or_else(Vec::new, |g| g.fonts.clone())
 }
 
 pub(crate) fn add_font_to_group(app: &mut PhotocraftApp, family: &str, name: &str) -> Result<(), String> {
@@ -237,9 +220,7 @@ fn create_group(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
         return Err(format!("A group named {name} already exists"));
     }
     app.session.prefs.edit(|p| {
-        p.text_library_groups.push(photocraft_engine::prefs::TextLibraryFontGroup {
-            name: name.to_string(), fonts: Vec::new(),
-        });
+        p.text_library_groups.push(photocraft_engine::prefs::TextLibraryFontGroup { name: name.to_string(), fonts: Vec::new() });
         p.text_library_active_group = name.to_string();
     });
     Ok(())
@@ -252,8 +233,7 @@ pub(crate) fn font_star(app: &mut PhotocraftApp, ui: &mut egui::Ui, family: &str
     let in_active = fonts_in_group(app, &active).iter().any(|f| f == family);
     let label = if in_active { "★" } else { "☆" };
     let shift = ui.input(|i| i.modifiers.shift);
-    let button = ui.add_sized([22.0, 22.0], egui::Button::new(label))
-        .on_hover_text("Add font to a group (Shift-click: active group)");
+    let button = ui.add_sized([22.0, 22.0], egui::Button::new(label)).on_hover_text("Add font to a group (Shift-click: active group)");
     if shift && button.clicked() {
         let result = add_font_to_group(app, family, &active);
         message(app, result);
@@ -322,14 +302,11 @@ fn import_font_group(app: &mut PhotocraftApp) -> Result<Value, String> {
             return Err("Select a .pcraftfp font pack".into());
         }
         let pack = crate::font_pack::decode(&bytes)?;
-        let directory = app.services.font_pack_dir.clone().ok_or(
-            "Font-pack installation is unavailable on this platform"
-        )?;
+        let directory = app.services.font_pack_dir.clone().ok_or("Font-pack installation is unavailable on this platform")?;
         // Persist every source only after validating the full archive, before
         // claiming the group is imported. Startup reloads these same binaries.
         let installed_files = crate::font_pack::persist_fonts(&directory, &pack)?;
-        let mut engine = photocraft_text::shared().lock()
-            .map_err(|_| "Font database is temporarily unavailable")?;
+        let mut engine = photocraft_text::shared().lock().map_err(|_| "Font database is temporarily unavailable")?;
         for family in &pack.fonts {
             for file in &family.files {
                 let installed = engine.fonts.register_font_data(file.clone());
@@ -396,7 +373,9 @@ fn run_text_effect(app: &mut PhotocraftApp, effect: &EffectSettings) -> Result<(
     });
     let mut p = if let Some(mut target) = crate::type_tool::formatting_params(app) {
         if let Some(map) = props.as_object() {
-            for (key, value) in map { target[key] = value.clone(); }
+            for (key, value) in map {
+                target[key] = value.clone();
+            }
         }
         target
     } else {
@@ -421,83 +400,78 @@ fn run_text_effect(app: &mut PhotocraftApp, effect: &EffectSettings) -> Result<(
 }
 
 fn effect_panel(app: &mut PhotocraftApp, settings: &mut EffectSettings, ui: &mut egui::Ui) {
-    egui::ScrollArea::vertical()
-        .id_salt("text-library-character-effects")
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.label("Character effects");
-            ui.weak("Select characters with the Type tool or select a text layer. No rasterizing or smart objects.");
-            ui.add_space(6.0);
+    egui::ScrollArea::vertical().id_salt("text-library-character-effects").auto_shrink([false, false]).show(ui, |ui| {
+        ui.label("Character effects");
+        ui.weak("Select characters with the Type tool or select a text layer. No rasterizing or smart objects.");
+        ui.add_space(6.0);
 
-            egui::ComboBox::from_id_salt("text-library-effect-mode")
-                .selected_text(match settings.mode {
-                    EffectMode::Random => "Random",
-                    EffectMode::Taper => "Decrease",
-                    EffectMode::Alternate => "Alternating",
-                })
-                .width(ui.available_width().min(220.0).max(80.0))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut settings.mode, EffectMode::Random, "Random");
-                    ui.selectable_value(&mut settings.mode, EffectMode::Taper, "Decrease");
-                    ui.selectable_value(&mut settings.mode, EffectMode::Alternate, "Alternating");
+        egui::ComboBox::from_id_salt("text-library-effect-mode")
+            .selected_text(match settings.mode {
+                EffectMode::Random => "Random",
+                EffectMode::Taper => "Decrease",
+                EffectMode::Alternate => "Alternating",
+            })
+            .width(ui.available_width().min(220.0).max(80.0))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut settings.mode, EffectMode::Random, "Random");
+                ui.selectable_value(&mut settings.mode, EffectMode::Taper, "Decrease");
+                ui.selectable_value(&mut settings.mode, EffectMode::Alternate, "Alternating");
+            });
+        ui.add_space(8.0);
+
+        match settings.mode {
+            EffectMode::Random | EffectMode::Alternate => {
+                ui.label("Letter size (% of its current size)");
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Min");
+                    ui.add(egui::DragValue::new(&mut settings.min_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
+                    ui.label("Max");
+                    ui.add(egui::DragValue::new(&mut settings.max_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
                 });
-            ui.add_space(8.0);
-
-            match settings.mode {
-                EffectMode::Random | EffectMode::Alternate => {
-                    ui.label("Letter size (% of its current size)");
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label("Min");
-                        ui.add(egui::DragValue::new(&mut settings.min_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
-                        ui.label("Max");
-                        ui.add(egui::DragValue::new(&mut settings.max_percent).range(10.0..=400.0).speed(1.0).suffix("%"));
-                    });
+                ui.add_space(5.0);
+                ui.label("Letter rotation (degrees)");
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Min");
+                    ui.add(egui::DragValue::new(&mut settings.min_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                    ui.label("Max");
+                    ui.add(egui::DragValue::new(&mut settings.max_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
+                });
+                if settings.mode == EffectMode::Random {
                     ui.add_space(5.0);
-                    ui.label("Letter rotation (degrees)");
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label("Min");
-                        ui.add(egui::DragValue::new(&mut settings.min_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
-                        ui.label("Max");
-                        ui.add(egui::DragValue::new(&mut settings.max_rotation).range(-30.0..=30.0).speed(0.5).suffix("°"));
-                    });
-                    if settings.mode == EffectMode::Random {
-                        ui.add_space(5.0);
-                        ui.horizontal(|ui| {
-                            ui.label(format!("Variation #{}", settings.seed));
-                            if ui.small_button("New seed").on_hover_text("Generate a different deterministic random pattern").clicked() {
-                                settings.seed = settings.seed.wrapping_add(1);
-                            }
-                        });
-                    } else {
-                        ui.weak("Alternates large/small and left/right rotation for each character.");
-                    }
-                }
-                EffectMode::Taper => {
-                    ui.label("Last letter size");
                     ui.horizontal(|ui| {
-                        ui.add(egui::DragValue::new(&mut settings.end_size).range(0.1..=1296.0).speed(0.5).suffix(" pt"));
-                        ui.checkbox(&mut settings.reverse, "Reverse");
+                        ui.label(format!("Variation #{}", settings.seed));
+                        if ui.small_button("New seed").on_hover_text("Generate a different deterministic random pattern").clicked() {
+                            settings.seed = settings.seed.wrapping_add(1);
+                        }
                     });
-                    ui.weak("Normal: start at the first letter's size and shrink to this limit. Reverse: grow from the limit to the original size.");
+                } else {
+                    ui.weak("Alternates large/small and left/right rotation for each character.");
                 }
             }
-            if settings.min_percent > settings.max_percent || settings.min_rotation > settings.max_rotation {
-                ui.colored_label(egui::Color32::from_rgb(240, 130, 90), "Minimum must not exceed maximum.");
+            EffectMode::Taper => {
+                ui.label("Last letter size");
+                ui.horizontal(|ui| {
+                    ui.add(egui::DragValue::new(&mut settings.end_size).range(0.1..=1296.0).speed(0.5).suffix(" pt"));
+                    ui.checkbox(&mut settings.reverse, "Reverse");
+                });
+                ui.weak("Normal: start at the first letter's size and shrink to this limit. Reverse: grow from the limit to the original size.");
             }
-            ui.add_space(10.0);
-            let enabled = type_target(app).is_ok()
-                && settings.min_percent <= settings.max_percent
-                && settings.min_rotation <= settings.max_rotation;
-            if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
-                let result = run_text_effect(app, settings);
-                message(app, result);
-            }
-            if !enabled && type_target(app).is_err() {
-                ui.weak("Select an editable text layer to enable Apply.");
-            }
-            ui.add_space(8.0);
-            ui.weak("Each Apply changes character formatting and can be undone with Ctrl+Z. Applying again uses the currently styled text as its starting point.");
-        });
+        }
+        if settings.min_percent > settings.max_percent || settings.min_rotation > settings.max_rotation {
+            ui.colored_label(egui::Color32::from_rgb(240, 130, 90), "Minimum must not exceed maximum.");
+        }
+        ui.add_space(10.0);
+        let enabled = type_target(app).is_ok() && settings.min_percent <= settings.max_percent && settings.min_rotation <= settings.max_rotation;
+        if ui.add_enabled(enabled, egui::Button::new("Apply to text")).clicked() {
+            let result = run_text_effect(app, settings);
+            message(app, result);
+        }
+        if !enabled && type_target(app).is_err() {
+            ui.weak("Select an editable text layer to enable Apply.");
+        }
+        ui.add_space(8.0);
+        ui.weak("Each Apply changes character formatting and can be undone with Ctrl+Z. Applying again uses the currently styled text as its starting point.");
+    });
 }
 
 fn library_styles(app: &PhotocraftApp) -> Vec<StylePreset> {
@@ -512,10 +486,13 @@ fn save_style(app: &mut PhotocraftApp) -> Result<(), String> {
     }
     // Native preset persistence: this is saved to Preferences/presets and
     // survives app restarts, while the document's text formatting is never read.
-    app.run("style.presets.new", json!({
-        "name": "Text Style", "group": GROUP, "layer": layer,
-        "includeEffects": true, "includeBlending": false
-    }))?;
+    app.run(
+        "style.presets.new",
+        json!({
+            "name": "Text Style", "group": GROUP, "layer": layer,
+            "includeEffects": true, "includeBlending": false
+        }),
+    )?;
     Ok(())
 }
 
@@ -523,21 +500,28 @@ fn apply_style(app: &mut PhotocraftApp, preset: &StylePreset) -> Result<(), Stri
     let id = type_target(app)?;
     // The regular `style.presets.apply` command resets Fill Opacity even when
     // the preset has no blending options. `replace` changes *only* layer effects.
-    let effects: Vec<Value> = preset.effects.iter().map(|fx| {
-        json!({
-            "kind": photocraft_engine::layer_style::kind_of(fx),
-            "fx": fx,
-            "params": {}
+    let effects: Vec<Value> = preset
+        .effects
+        .iter()
+        .map(|fx| {
+            json!({
+                "kind": photocraft_engine::layer_style::kind_of(fx),
+                "fx": fx,
+                "params": {}
+            })
         })
-    }).collect();
+        .collect();
     app.run("layer.layerStyle.replace", json!({"layer": id, "effects": effects}))?;
     Ok(())
 }
 
 fn delete_style(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
-    app.run("style.presets.edit", json!({
-        "action": "delete", "group": GROUP, "preset": name
-    }))?;
+    app.run(
+        "style.presets.edit",
+        json!({
+            "action": "delete", "group": GROUP, "preset": name
+        }),
+    )?;
     Ok(())
 }
 
@@ -562,82 +546,74 @@ fn remove_card(app: &mut PhotocraftApp, tab: Tab, name: &str) -> Result<(), Stri
 
 /// Fourth RE:ICA MangaLab tab: batch page setup, conservative white-bubble clean.
 fn pages_panel(app: &mut PhotocraftApp, p: &mut PageSettings, ui: &mut egui::Ui) {
-    egui::ScrollArea::vertical()
-        .id_salt("reica-pages-panel")
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.heading("Manga Pages");
-            ui.label("Treat each selected top-level layer/group as one page of this PSD.");
-            ui.label("Page 001  /  clean / bubble_fills  +  source / original");
-            ui.add_space(5.0);
-            ui.checkbox(&mut p.selected_only, "Selected top-level layers only");
-            ui.checkbox(&mut p.reverse, "Reverse page numbering (bottom -> top)");
+    egui::ScrollArea::vertical().id_salt("reica-pages-panel").auto_shrink([false, false]).show(ui, |ui| {
+        ui.heading("Manga Pages");
+        ui.label("Treat each selected top-level layer/group as one page of this PSD.");
+        ui.label("Page 001  /  clean / bubble_fills  +  source / original");
+        ui.add_space(5.0);
+        ui.checkbox(&mut p.selected_only, "Selected top-level layers only");
+        ui.checkbox(&mut p.reverse, "Reverse page numbering (bottom -> top)");
+        ui.horizontal(|ui| {
+            ui.label("First page number");
+            ui.add(egui::DragValue::new(&mut p.first).range(1..=99999).speed(1));
+        });
+        ui.separator();
+        ui.checkbox(&mut p.auto_clean, "Auto-fill speech bubbles on bubble_fills");
+        ui.add_enabled_ui(p.auto_clean, |ui| {
+            ui.checkbox(&mut p.round, "Detect round / oval");
+            ui.checkbox(&mut p.rectangle, "Detect rectangular");
             ui.horizontal(|ui| {
-                ui.label("First page number");
-                ui.add(egui::DragValue::new(&mut p.first).range(1..=99999).speed(1));
+                ui.label("Minimum size (px)");
+                ui.add(egui::DragValue::new(&mut p.min_size).range(12..=1000));
             });
-            ui.separator();
-            ui.checkbox(&mut p.auto_clean, "Auto-fill speech bubbles on bubble_fills");
-            ui.add_enabled_ui(p.auto_clean, |ui| {
-                ui.checkbox(&mut p.round, "Detect round / oval");
-                ui.checkbox(&mut p.rectangle, "Detect rectangular");
-                ui.horizontal(|ui| {
-                    ui.label("Minimum size (px)");
-                    ui.add(egui::DragValue::new(&mut p.min_size).range(12..=1000));
-                });
-                ui.horizontal(|ui| {
-                    ui.label("White threshold");
-                    ui.add(egui::Slider::new(&mut p.threshold, 150..=250));
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Protect outline (px)");
-                    ui.add(egui::DragValue::new(&mut p.margin).range(0..=30));
-                });
+            ui.horizontal(|ui| {
+                ui.label("White threshold");
+                ui.add(egui::Slider::new(&mut p.threshold, 150..=250));
             });
-            ui.add_space(5.0);
-            ui.small("Non-destructive: all original layers are preserved inside source.");
-            ui.small("Auto-clean only handles light, closed bubbles on raster pages. Review every result; Undo reverses the operation.");
-            ui.small("For packed images or pages spread over multiple layers, group each page first.");
-            ui.add_space(7.0);
-            if ui.button("Create Page Groups + Clean").clicked() {
-                let params = json!({
-                    "first": p.first,
-                    "reverse": p.reverse,
-                    "selectedOnly": p.selected_only,
-                    "autoClean": p.auto_clean,
-                    "round": p.round,
-                    "rectangle": p.rectangle,
-                    "minSize": p.min_size,
-                    "threshold": p.threshold,
-                    "margin": p.margin,
-                });
-                match app.run("reica.mangaPages.create", params) {
-                    Ok(result) => {
-                        app.ui.status = format!(
-                            "RE:ICA Pages: {} page groups, {} bubbles cleaned. Check the new layers.",
-                            result["pages"].as_u64().unwrap_or(0),
-                            result["bubbles"].as_u64().unwrap_or(0),
-                        );
-                        app.ui.status_error = false;
-                    }
-                    Err(error) => {
-                        app.ui.status = error;
-                        app.ui.status_error = true;
-                    }
+            ui.horizontal(|ui| {
+                ui.label("Protect outline (px)");
+                ui.add(egui::DragValue::new(&mut p.margin).range(0..=30));
+            });
+        });
+        ui.add_space(5.0);
+        ui.small("Non-destructive: all original layers are preserved inside source.");
+        ui.small("Auto-clean only handles light, closed bubbles on raster pages. Review every result; Undo reverses the operation.");
+        ui.small("For packed images or pages spread over multiple layers, group each page first.");
+        ui.add_space(7.0);
+        if ui.button("Create Page Groups + Clean").clicked() {
+            let params = json!({
+                "first": p.first,
+                "reverse": p.reverse,
+                "selectedOnly": p.selected_only,
+                "autoClean": p.auto_clean,
+                "round": p.round,
+                "rectangle": p.rectangle,
+                "minSize": p.min_size,
+                "threshold": p.threshold,
+                "margin": p.margin,
+            });
+            match app.run("reica.mangaPages.create", params) {
+                Ok(result) => {
+                    app.ui.status = format!(
+                        "RE:ICA Pages: {} page groups, {} bubbles cleaned. Check the new layers.",
+                        result["pages"].as_u64().unwrap_or(0),
+                        result["bubbles"].as_u64().unwrap_or(0),
+                    );
+                    app.ui.status_error = false;
+                }
+                Err(error) => {
+                    app.ui.status = error;
+                    app.ui.status_error = true;
                 }
             }
-        });
+        }
+    });
 }
 
 // Actual text shaped and rendered by PhotoCraft's text engine, with the saved
 // layer effects applied by PhotoCraft's compositor. No imitation CSS styles.
 fn render_style_preview(preset: &StylePreset) -> ColorImage {
-    let mut doc = Document::new(
-        "Text Library Preview",
-        Size::new(PREVIEW_W, PREVIEW_H),
-        ColorMode::Rgb,
-        SampleType::U8,
-    );
+    let mut doc = Document::new("Text Library Preview", Size::new(PREVIEW_W, PREVIEW_H), ColorMode::Rgb, SampleType::U8);
     let mut text = TextLayer {
         text: "Aa".into(),
         font_family: photocraft_text::fonts::DEFAULT_FAMILY.to_string(),
@@ -683,9 +659,20 @@ fn style_texture(ctx: &egui::Context, style: &StylePreset) -> TextureHandle {
 fn paint_card(ui: &mut egui::Ui, tab: Tab, name: &str, style: Option<&StylePreset>, rect: Rect, picked: bool) -> egui::Response {
     let theme = crate::theme::Tokens::get(ui.ctx());
     let response = ui.interact(rect, ui.scope_id().with(("text-library-card", tab, name)), Sense::click_and_drag());
-    let fill = if picked { theme.row_selected } else if response.hovered() { theme.hover } else { theme.field };
+    let fill = if picked {
+        theme.row_selected
+    } else if response.hovered() {
+        theme.hover
+    } else {
+        theme.field
+    };
     ui.painter().rect_filled(rect, CornerRadius::same(9), fill);
-    ui.painter().rect_stroke(rect, CornerRadius::same(9), egui::Stroke::new(1.0, if picked { theme.accent } else { theme.card_border }), egui::StrokeKind::Inside);
+    ui.painter().rect_stroke(
+        rect,
+        CornerRadius::same(9),
+        egui::Stroke::new(1.0, if picked { theme.accent } else { theme.card_border }),
+        egui::StrokeKind::Inside,
+    );
 
     let preview = Rect::from_min_max(rect.min + vec2(3.0, 3.0), pos2(rect.right() - 3.0, rect.bottom() - 25.0));
     if ui.is_rect_visible(rect) {
@@ -731,23 +718,32 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         ui.selectable_value(&mut state.tab, Tab::Effects, "Effects");
         ui.selectable_value(&mut state.tab, Tab::Pages, "Pages");
         if state.tab != Tab::Effects && state.tab != Tab::Pages {
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer", Tab::Effects => "Editable text effects", Tab::Pages => "Manga page preparation" }).clicked() {
-                match state.tab {
-                    Tab::Fonts => {
-                        state.adding_font = !state.adding_font;
-                        if state.font_to_add.is_empty() {
-                            state.font_to_add = crate::type_tool::families().first().cloned().unwrap_or_default();
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .small_button("+")
+                    .on_hover_text(match state.tab {
+                        Tab::Fonts => "Add an installed font",
+                        Tab::Styles => "Save effects from selected text layer",
+                        Tab::Effects => "Editable text effects",
+                        Tab::Pages => "Manga page preparation",
+                    })
+                    .clicked()
+                {
+                    match state.tab {
+                        Tab::Fonts => {
+                            state.adding_font = !state.adding_font;
+                            if state.font_to_add.is_empty() {
+                                state.font_to_add = crate::type_tool::families().first().cloned().unwrap_or_default();
+                            }
                         }
+                        Tab::Styles => {
+                            let result = save_style(app);
+                            message(app, result);
+                        }
+                        Tab::Effects | Tab::Pages => {}
                     }
-                    Tab::Styles => {
-                        let result = save_style(app);
-                        message(app, result);
-                    },
-                    Tab::Effects | Tab::Pages => {},
                 }
-            }
-        });
+            });
         }
     });
     ui.separator();
@@ -781,14 +777,16 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             state.selected = None;
         }
         ui.horizontal_wrapped(|ui| {
-            if ui.small_button("Export…")
+            if ui
+                .small_button("Export…")
                 .on_hover_text("Save this entire group as .pcraftfp, including the real TTF/OTF/TTC font files. Share only if their licences permit.")
                 .clicked()
             {
                 let result = export_font_group(app);
                 message(app, result.map(|_| ()));
             }
-            if ui.small_button("Import…")
+            if ui
+                .small_button("Import…")
                 .on_hover_text("Import a .pcraftfp group and its font files; install privately for RE:ICA Edition. Existing groups are merged.")
                 .clicked()
             {
@@ -798,8 +796,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         });
         if state.creating_group {
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut state.new_group_name)
-                    .hint_text("Group name").desired_width(170.0));
+                ui.add(egui::TextEdit::singleline(&mut state.new_group_name).hint_text("Group name").desired_width(170.0));
                 if ui.small_button("Create").clicked() {
                     let result = create_group(app, &state.new_group_name);
                     if result.is_ok() {
@@ -820,8 +817,13 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             let width = (ui.available_width() - 77.0).max(20.0);
             let mut library = crate::type_tool::FontLibrary::of(app);
             crate::type_tool::family_picker_in(
-                ui, "text-library-font-add", &mut state.font_to_add, width,
-                &families, app.session.prefs().type_.font_preview, &mut library,
+                ui,
+                "text-library-font-add",
+                &mut state.font_to_add,
+                width,
+                &families,
+                app.session.prefs().type_.font_preview,
+                &mut library,
             );
             library.finish(app);
             if ui.button("Add").clicked() {
@@ -858,54 +860,43 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     // Only the scroll content consumes rows. The fixed header and trash stay in place.
     // The scrollbar is managed by ScrollArea; compute widths from its actual inner UI.
     let scroll_height = (ui.available_height() - 50.0).max(34.0);
-    egui::ScrollArea::vertical()
-        .id_salt(("text-library-cards", state.tab))
-        .max_height(scroll_height)
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            let content_width = ui.available_width().max(1.0);
-            let card_width = ((content_width - 2.0 * GAP) / 3.0).max(0.0);
-            let row_count = names.len().div_ceil(3);
-            let grid_height = if row_count == 0 {
-                1.0
-            } else {
-                row_count as f32 * CARD_H + (row_count - 1) as f32 * GAP
-            };
+    egui::ScrollArea::vertical().id_salt(("text-library-cards", state.tab)).max_height(scroll_height).auto_shrink([false, false]).show(ui, |ui| {
+        let content_width = ui.available_width().max(1.0);
+        let card_width = ((content_width - 2.0 * GAP) / 3.0).max(0.0);
+        let row_count = names.len().div_ceil(3);
+        let grid_height = if row_count == 0 { 1.0 } else { row_count as f32 * CARD_H + (row_count - 1) as f32 * GAP };
 
-            // Reserve the ENTIRE grid height at once. Individual cards use
-            // ui.interact(rect), which does not advance the layout cursor.
-            // The single reservation prevents overlapping rows and keeps
-            // ScrollArea's content height accurate in narrow docked panels.
-            let (grid_rect, _) = ui.allocate_exact_size(
-                vec2(content_width, grid_height),
-                Sense::hover(),
-            );
-            for (index, name) in names.iter().enumerate() {
-                let col = (index % 3) as f32;
-                let row = (index / 3) as f32;
-                let x = grid_rect.left() + col * (card_width + GAP);
-                let y = grid_rect.top() + row * (CARD_H + GAP);
-                let card_rect = Rect::from_min_size(pos2(x, y), vec2(card_width, CARD_H));
-                let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
-                let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
-                let response = paint_card(ui, state.tab, name, style, card_rect, selected);
-                if response.clicked() {
-                    state.selected = Some((state.tab, name.clone()));
-                    let result = apply_card(app, state.tab, name, &styles);
-                    message(app, result);
-                }
-                if response.drag_started() {
-                    state.dragged = Some((state.tab, name.clone()));
-                }
-                response.context_menu(|ui| {
-                    if ui.button("Remove from group").clicked() {
-                        let result = remove_card(app, state.tab, name);
-                        message(app, result);
-                        ui.close();
-                    }
-                });
+        // Reserve the ENTIRE grid height at once. Individual cards use
+        // ui.interact(rect), which does not advance the layout cursor.
+        // The single reservation prevents overlapping rows and keeps
+        // ScrollArea's content height accurate in narrow docked panels.
+        let (grid_rect, _) = ui.allocate_exact_size(vec2(content_width, grid_height), Sense::hover());
+        for (index, name) in names.iter().enumerate() {
+            let col = (index % 3) as f32;
+            let row = (index / 3) as f32;
+            let x = grid_rect.left() + col * (card_width + GAP);
+            let y = grid_rect.top() + row * (CARD_H + GAP);
+            let card_rect = Rect::from_min_size(pos2(x, y), vec2(card_width, CARD_H));
+            let selected = state.selected.as_ref().is_some_and(|(t, n)| *t == state.tab && n == name);
+            let style = if state.tab == Tab::Styles { styles.iter().find(|s| &s.name == name) } else { None };
+            let response = paint_card(ui, state.tab, name, style, card_rect, selected);
+            if response.clicked() {
+                state.selected = Some((state.tab, name.clone()));
+                let result = apply_card(app, state.tab, name, &styles);
+                message(app, result);
             }
-        });
+            if response.drag_started() {
+                state.dragged = Some((state.tab, name.clone()));
+            }
+            response.context_menu(|ui| {
+                if ui.button("Remove from group").clicked() {
+                    let result = remove_card(app, state.tab, name);
+                    message(app, result);
+                    ui.close();
+                }
+            });
+        }
+    });
 
     ui.add_space(5.0);
     let (trash, response) = ui.allocate_exact_size(Vec2::new(ui.available_width().max(1.0), 31.0), Sense::hover());

@@ -1,11 +1,11 @@
 //! RE:ICA MangaLab / Pages: non-destructive page grouping and conservative bubble cleaning.
 //! One top-level raster layer or group is treated as one manga page. Nothing is flattened.
 //! The fill is deliberately a separate raster layer, not a modification of the original.
-use std::collections::HashSet;
 use photocraft_doc::{Document, Layer, LayerContent, LayerId, MAX_GROUP_DEPTH};
 use photocraft_geom::Rect;
 use photocraft_raster::{Surface, from_rgba};
 use serde_json::{Value, json};
+use std::collections::HashSet;
 
 use crate::commands::CommandSpec;
 use crate::{EngineError, Result, Session};
@@ -57,7 +57,9 @@ fn selected_page_ids(s: &Session, o: Options) -> Result<Vec<LayerId>> {
     if doc.max_group_depth() + 2 > MAX_GROUP_DEPTH {
         return Err(EngineError::Other("Page/source/clean nesting would exceed the document group-depth limit".into()));
     }
-    let ids: Vec<_> = doc.layers.iter()
+    let ids: Vec<_> = doc
+        .layers
+        .iter()
         .filter(|l| {
             !doc.is_background(l.id)
                 && !l.name.starts_with("Page ")
@@ -78,14 +80,16 @@ fn selected_page_ids(s: &Session, o: Options) -> Result<Vec<LayerId>> {
 /// The largest *raster* inside a page acts as the page background for bubble detection.
 /// Other layers, including typeset text, are kept untouched and editable.
 fn biggest_raster(layer: &Layer, depth: usize) -> Option<&Surface> {
-    if depth > MAX_GROUP_DEPTH { return None; }
-    if let LayerContent::Raster(surface) = &layer.content { return Some(surface); }
-    layer.children()?.iter().filter(|child| child.visible)
-        .filter_map(|child| biggest_raster(child, depth + 1))
-        .max_by_key(|s| {
-            let bounds = s.content_bounds();
-            u64::from(bounds.width()) * u64::from(bounds.height())
-        })
+    if depth > MAX_GROUP_DEPTH {
+        return None;
+    }
+    if let LayerContent::Raster(surface) = &layer.content {
+        return Some(surface);
+    }
+    layer.children()?.iter().filter(|child| child.visible).filter_map(|child| biggest_raster(child, depth + 1)).max_by_key(|s| {
+        let bounds = s.content_bounds();
+        u64::from(bounds.width()) * u64::from(bounds.height())
+    })
 }
 
 fn light(p: [u8; 4], threshold: u8) -> bool {
@@ -100,14 +104,18 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
     let w = rect.width() as usize;
     let h = rect.height() as usize;
     let Some(count) = w.checked_mul(h) else { return 0 };
-    if w < o.min_size || h < o.min_size || count > MAX_PIXELS || count == 0 { return 0; }
+    if w < o.min_size || h < o.min_size || count > MAX_PIXELS || count == 0 {
+        return 0;
+    }
     let mut rgba = vec![[0u8; 4]; count];
     source.read_rgba8_into(rect, &mut rgba);
     let mut seen = vec![false; count];
     let white = from_rgba(&output.format(), [1.0, 1.0, 1.0, 1.0]);
     let mut cleaned = 0;
     for seed in 0..count {
-        if seen[seed] || !light(rgba[seed], o.threshold) { continue; }
+        if seen[seed] || !light(rgba[seed], o.threshold) {
+            continue;
+        }
         seen[seed] = true;
         let mut todo = vec![seed];
         let mut area = 0usize;
@@ -116,12 +124,18 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         let mut row_max = vec![0usize; h];
         let mut at_border = false;
         while let Some(i) = todo.pop() {
-            let x = i % w; let y = i / w;
-            minx = minx.min(x); maxx = maxx.max(x);
-            miny = miny.min(y); maxy = maxy.max(y);
-            row_min[y] = row_min[y].min(x); row_max[y] = row_max[y].max(x);
+            let x = i % w;
+            let y = i / w;
+            minx = minx.min(x);
+            maxx = maxx.max(x);
+            miny = miny.min(y);
+            maxy = maxy.max(y);
+            row_min[y] = row_min[y].min(x);
+            row_max[y] = row_max[y].max(x);
             area += 1;
-            if x == 0 || y == 0 || x + 1 == w || y + 1 == h { at_border = true; }
+            if x == 0 || y == 0 || x + 1 == w || y + 1 == h {
+                at_border = true;
+            }
             let neighbors = [
                 if x > 0 { Some(i - 1) } else { None },
                 if x + 1 < w { Some(i + 1) } else { None },
@@ -138,14 +152,18 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         let bw = maxx - minx + 1;
         let bh = maxy - miny + 1;
         let bbox_area = bw.saturating_mul(bh);
-        if at_border || bw < o.min_size || bh < o.min_size || bbox_area == 0 { continue; }
-        if bbox_area > count / 3 || bw > 6 * bh || bh > 6 * bw { continue; }
+        if at_border || bw < o.min_size || bh < o.min_size || bbox_area == 0 {
+            continue;
+        }
+        if bbox_area > count / 3 || bw > 6 * bh || bh > 6 * bw {
+            continue;
+        }
         // Reject sparse white texture fragments, tiny islands and broad page backgrounds.
         let coverage = area as f32 / bbox_area as f32;
-        if !(0.38..=0.995).contains(&coverage) { continue; }
-        let span = |y: usize| -> usize {
-            if y < h && row_min[y] < w { row_max[y] - row_min[y] + 1 } else { 0 }
-        };
+        if !(0.38..=0.995).contains(&coverage) {
+            continue;
+        }
+        let span = |y: usize| -> usize { if y < h && row_min[y] < w { row_max[y] - row_min[y] + 1 } else { 0 } };
         // Compare average width near the upper edge and middle to classify the contour.
         let k = (bh / 12).max(1);
         let avg = |from: usize| -> usize {
@@ -155,7 +173,9 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         let upper = avg(miny + k);
         let mid = avg(miny + bh / 2 - k / 2);
         let round = upper * 100 < mid * 72;
-        if (round && !o.round) || (!round && !o.rectangle) { continue; }
+        if (round && !o.round) || (!round && !o.rectangle) {
+            continue;
+        }
 
         // Require some darker content within the light region's bounding box. In a typical
         // lettered bubble this is text and the thin ink contour. Avoid blank white panels.
@@ -164,24 +184,31 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         for y in (miny..=maxy).step_by((bh / 35).max(1)) {
             for x in (minx..=maxx).step_by(stride) {
                 let p = rgba[y * w + x];
-                if p[3] > 200 && p[0] < 160 && p[1] < 160 && p[2] < 160 { dark += 1; }
+                if p[3] > 200 && p[0] < 160 && p[1] < 160 && p[2] < 160 {
+                    dark += 1;
+                }
             }
         }
-        if dark < 2 { continue; }
+        if dark < 2 {
+            continue;
+        }
         // One thin opaque scanline per row. The transparent output remains fully editable.
         let mut did_paint = false;
         for y in miny..=maxy {
-            if row_min[y] >= w { continue; }
+            if row_min[y] >= w {
+                continue;
+            }
             let x0 = row_min[y].saturating_add(o.margin);
             let x1 = row_max[y].saturating_sub(o.margin);
-            if x1 <= x0 { continue; }
-            output.fill_rect(Rect::new(
-                rect.x0 + x0 as i32, rect.y0 + y as i32,
-                rect.x0 + x1 as i32 + 1, rect.y0 + y as i32 + 1,
-            ), &white);
+            if x1 <= x0 {
+                continue;
+            }
+            output.fill_rect(Rect::new(rect.x0 + x0 as i32, rect.y0 + y as i32, rect.x0 + x1 as i32 + 1, rect.y0 + y as i32 + 1), &white);
             did_paint = true;
         }
-        if did_paint { cleaned += 1; }
+        if did_paint {
+            cleaned += 1;
+        }
     }
     cleaned
 }
@@ -279,8 +306,8 @@ mod tests {
         // Put black lettering inside the light bubble.
         source.fill_rect(Rect::new(42, 65, 112, 71), &dark);
         let mut out = Surface::new(fmt);
-        let opt = Options { reverse: false, selected_only: false, clean: true,
-            round: true, rectangle: true, threshold: 225, margin: 3, min_size: 35, first: 1 };
+        let opt =
+            Options { reverse: false, selected_only: false, clean: true, round: true, rectangle: true, threshold: 225, margin: 3, min_size: 35, first: 1 };
         assert_eq!(detect_and_fill(&source, &mut out, opt), 1);
         assert_eq!(source.rgba(50, 67)[0], 0.0);
         assert!(out.rgba(50, 67)[0] > 0.98);

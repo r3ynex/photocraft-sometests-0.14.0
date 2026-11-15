@@ -101,14 +101,14 @@ pub mod layer_list_cmds;
 pub mod layer_mask_props_cmds;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
-/// RE:ICA MangaLab batch page preparation.
-pub mod manga_pages_cmds;
 pub mod layer_nav_cmds;
 mod layer_params;
 mod layer_references;
 pub mod layer_xmp_cmds;
 pub mod lens_cmds;
 pub mod magnetic_cmds;
+/// RE:ICA MangaLab batch page preparation.
+pub mod manga_pages_cmds;
 pub mod mask_view_cmds;
 pub(super) mod migrate_cmds;
 pub mod mode_cmds;
