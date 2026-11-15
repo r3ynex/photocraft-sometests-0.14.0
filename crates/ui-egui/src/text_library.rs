@@ -80,6 +80,7 @@ pub struct PageSettings {
     pub auto_clean: bool,
     pub round: bool,
     pub rectangle: bool,
+    pub sample_color: bool,
     pub min_size: u32,
     pub threshold: u32,
     pub margin: u32,
@@ -87,7 +88,7 @@ pub struct PageSettings {
 
 impl Default for PageSettings {
     fn default() -> Self {
-        Self { first: 1, reverse: false, selected_only: true, auto_clean: true, round: true, rectangle: true, min_size: 35, threshold: 225, margin: 3 }
+        Self { first: 1, reverse: false, selected_only: true, auto_clean: true, round: true, rectangle: true, sample_color: false, min_size: 35, threshold: 225, margin: 3 }
     }
 }
 
@@ -562,6 +563,7 @@ fn pages_panel(app: &mut PhotocraftApp, p: &mut PageSettings, ui: &mut egui::Ui)
         ui.add_enabled_ui(p.auto_clean, |ui| {
             ui.checkbox(&mut p.round, "Detect round / oval");
             ui.checkbox(&mut p.rectangle, "Detect rectangular");
+            ui.checkbox(&mut p.sample_color, "Sample interior color (otherwise white)");
             ui.horizontal(|ui| {
                 ui.label("Minimum size (px)");
                 ui.add(egui::DragValue::new(&mut p.min_size).range(12..=1000));
@@ -578,7 +580,7 @@ fn pages_panel(app: &mut PhotocraftApp, p: &mut PageSettings, ui: &mut egui::Ui)
         ui.add_space(5.0);
         ui.small("Non-destructive: all original layers are preserved inside source.");
         ui.small("Auto-clean only handles light, closed bubbles on raster pages. Review every result; Undo reverses the operation.");
-        ui.small("For packed images or pages spread over multiple layers, group each page first.");
+        ui.small("For packed images or pages spread over multiple layers, group each page first. Artboards are skipped.");
         ui.add_space(7.0);
         if ui.button("Create Page Groups + Clean").clicked() {
             let params = json!({
@@ -588,6 +590,7 @@ fn pages_panel(app: &mut PhotocraftApp, p: &mut PageSettings, ui: &mut egui::Ui)
                 "autoClean": p.auto_clean,
                 "round": p.round,
                 "rectangle": p.rectangle,
+                "sampleColor": p.sample_color,
                 "minSize": p.min_size,
                 "threshold": p.threshold,
                 "margin": p.margin,
