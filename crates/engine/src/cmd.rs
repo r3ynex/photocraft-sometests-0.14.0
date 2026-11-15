@@ -101,6 +101,8 @@ pub mod layer_list_cmds;
 pub mod layer_mask_props_cmds;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
+/// RE:ICA MangaLab batch page preparation.
+pub mod manga_pages_cmds;
 pub mod layer_nav_cmds;
 mod layer_params;
 mod layer_references;
@@ -1350,6 +1352,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::type_caret_cmds::specs());
     v.extend(crate::smart_cmds::specs());
     v.extend(crate::layer_multi_cmds::specs());
+    v.extend(crate::manga_pages_cmds::specs());
     v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::updates_cmds::specs());
