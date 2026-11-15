@@ -55,11 +55,18 @@ jobs:
             fi
           fi
           cargo metadata --format-version 1 > /dev/null
+          cargo fmt --all
           if ! git diff --quiet -- Cargo.lock; then
             git add Cargo.lock
             git commit -m "build: update upstream Cargo.lock"
           fi
       - name: Check text UI and engine
         run: cargo check -p photocraft-ui-egui -p photocraft-engine -p photocraft-reica
+      - name: Include rustfmt corrections in verified merge
+        run: |
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m "style(reica): rustfmt upstream compatibility changes"
+          fi
       - name: Publish compatible integration
         run: git push origin HEAD:refs/heads/feature/reica-mangalab-pages-20261116
