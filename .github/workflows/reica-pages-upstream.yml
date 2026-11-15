@@ -27,6 +27,7 @@ jobs:
           git remote add upstream https://github.com/storytold/photocraft.git
           git fetch --no-tags upstream main
           echo "Upstream HEAD $(git rev-parse upstream/main)"
+          reica_before_merge=$(git rev-parse HEAD)
           if ! git merge-base --is-ancestor upstream/main HEAD; then
             git merge --no-ff --no-commit --strategy=ort -X ours upstream/main || true
             if git ls-files -u | grep -q .; then
@@ -46,6 +47,12 @@ jobs:
             test -z "$(git ls-files -u)"
             test -f .git/MERGE_HEAD
             git commit -m "merge: upstream PhotoCraft into REICA MangaLab Pages"
+            # Preserve the known-good REICA font selector, which clashes with upstream refactor.
+            git show "$reica_before_merge:crates/ui-egui/src/tools/type_tool/options_bar.rs" > crates/ui-egui/src/tools/type_tool/options_bar.rs
+            if ! git diff --quiet -- crates/ui-egui/src/tools/type_tool/options_bar.rs; then
+              git add crates/ui-egui/src/tools/type_tool/options_bar.rs
+              git commit -m "fix(reica): keep compatible REICA type controls"
+            fi
           fi
           cargo metadata --format-version 1 > /dev/null
           if ! git diff --quiet -- Cargo.lock; then
