@@ -1,5 +1,5 @@
 name: REICA Pages - integrate current PhotoCraft upstream
-# Verification from final Pages engine code before publishing.
+# Verify Pages + recent multi-view input compatibility before publishing.
 on:
   push:
     branches: [feature/reica-mangalab-pages-20261116]
