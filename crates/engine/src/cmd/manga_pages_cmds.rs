@@ -1,7 +1,7 @@
 //! RE:ICA MangaLab / Pages: non-destructive page grouping and conservative bubble cleaning.
 //! One top-level raster layer or group is treated as one manga page. Nothing is flattened.
 //! The fill is deliberately a separate raster layer, not a modification of the original.
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, MAX_GROUP_DEPTH};
+use photocraft_doc::{Layer, LayerContent, LayerId, MAX_GROUP_DEPTH};
 use photocraft_geom::Rect;
 use photocraft_raster::{Surface, from_rgba};
 use serde_json::{Value, json};
