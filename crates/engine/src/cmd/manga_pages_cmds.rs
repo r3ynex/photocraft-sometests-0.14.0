@@ -20,6 +20,7 @@ struct Options {
     clean: bool,
     round: bool,
     rectangle: bool,
+    sample_color: bool,
     threshold: u8,
     margin: usize,
     min_size: usize,
@@ -42,6 +43,7 @@ impl Options {
             clean: p.get("autoClean").and_then(Value::as_bool).unwrap_or(true),
             round: p.get("round").and_then(Value::as_bool).unwrap_or(true),
             rectangle: p.get("rectangle").and_then(Value::as_bool).unwrap_or(true),
+            sample_color: p.get("sampleColor").and_then(Value::as_bool).unwrap_or(false),
             threshold: threshold as u8,
             margin: margin as usize,
             min_size,
@@ -63,6 +65,7 @@ fn selected_page_ids(s: &Session, o: Options) -> Result<Vec<LayerId>> {
         .filter(|l| {
             !doc.is_background(l.id)
                 && !l.name.starts_with("Page ")
+                && l.artboard().is_none()
                 && (!o.selected_only || selected.contains(&l.id))
                 && matches!(&l.content, LayerContent::Raster(_) | LayerContent::Group(_))
         })
@@ -110,7 +113,7 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
     let mut rgba = vec![[0u8; 4]; count];
     source.read_rgba8_into(rect, &mut rgba);
     let mut seen = vec![false; count];
-    let white = from_rgba(&output.format(), [1.0, 1.0, 1.0, 1.0]);
+
     let mut cleaned = 0;
     for seed in 0..count {
         if seen[seed] || !light(rgba[seed], o.threshold) {
@@ -120,8 +123,8 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         let mut todo = vec![seed];
         let mut area = 0usize;
         let (mut minx, mut miny, mut maxx, mut maxy) = (w, h, 0usize, 0usize);
-        let mut row_min = vec![w; h];
-        let mut row_max = vec![0usize; h];
+        let mut component = Vec::new();
+        let mut sum = [0u64; 3];
         let mut at_border = false;
         while let Some(i) = todo.pop() {
             let x = i % w;
@@ -130,8 +133,8 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
             maxx = maxx.max(x);
             miny = miny.min(y);
             maxy = maxy.max(y);
-            row_min[y] = row_min[y].min(x);
-            row_max[y] = row_max[y].max(x);
+            component.push(i);
+            for c in 0..3 { sum[c] += u64::from(rgba[i][c]); }
             area += 1;
             if x == 0 || y == 0 || x + 1 == w || y + 1 == h {
                 at_border = true;
@@ -163,15 +166,24 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         if !(0.38..=0.995).contains(&coverage) {
             continue;
         }
-        let span = |y: usize| -> usize { if y < h && row_min[y] < w { row_max[y] - row_min[y] + 1 } else { 0 } };
+        // Only real candidates need row contours. Tiny white islands don't allocate h rows.
+        let mut row_min = vec![w; bh];
+        let mut row_max = vec![0usize; bh];
+        for i in component {
+            let x = i % w;
+            let y = i / w - miny;
+            row_min[y] = row_min[y].min(x);
+            row_max[y] = row_max[y].max(x);
+        }
+        let span = |y: usize| -> usize { if y < bh && row_min[y] < w { row_max[y] - row_min[y] + 1 } else { 0 } };
         // Compare average width near the upper edge and middle to classify the contour.
         let k = (bh / 12).max(1);
         let avg = |from: usize| -> usize {
-            let to = from.saturating_add(k).min(h);
+            let to = from.saturating_add(k).min(bh);
             (from..to).map(span).sum::<usize>() / (to - from).max(1)
         };
-        let upper = avg(miny + k);
-        let mid = avg(miny + bh / 2 - k / 2);
+        let upper = avg(k);
+        let mid = avg(bh / 2 - k / 2);
         let round = upper * 100 < mid * 72;
         if (round && !o.round) || (!round && !o.rectangle) {
             continue;
@@ -193,8 +205,13 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
             continue;
         }
         // One thin opaque scanline per row. The transparent output remains fully editable.
+        let color = if o.sample_color {
+            [sum[0] as f32 / area as f32 / 255.0, sum[1] as f32 / area as f32 / 255.0,
+             sum[2] as f32 / area as f32 / 255.0, 1.0]
+        } else { [1.0, 1.0, 1.0, 1.0] };
+        let paint = from_rgba(&output.format(), color);
         let mut did_paint = false;
-        for y in miny..=maxy {
+        for y in 0..bh {
             if row_min[y] >= w {
                 continue;
             }
@@ -203,7 +220,7 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
             if x1 <= x0 {
                 continue;
             }
-            output.fill_rect(Rect::new(rect.x0 + x0 as i32, rect.y0 + y as i32, rect.x0 + x1 as i32 + 1, rect.y0 + y as i32 + 1), &white);
+            output.fill_rect(Rect::new(rect.x0 + x0 as i32, rect.y0 + miny as i32 + y as i32, rect.x0 + x1 as i32 + 1, rect.y0 + miny as i32 + y as i32 + 1), &paint);
             did_paint = true;
         }
         if did_paint {
@@ -241,8 +258,12 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
                 }
             }
             let clean = Layer::group("clean", vec![fill_layer]);
-            let original = Layer::group("source", vec![layer]);
-            let group = Layer::group(format!("Page {page_number:03}"), vec![clean, original]);
+            let page_visible = layer.visible;
+            let mut original_layer = layer;
+            original_layer.visible = true; // visibility now belongs to the page group
+            let original = Layer::group("source", vec![original_layer]);
+            let mut group = Layer::group(format!("Page {page_number:03}"), vec![clean, original]);
+            group.visible = page_visible;
             groups.push(group.id);
             rebuilt.push(group);
         }
@@ -264,7 +285,7 @@ pub fn specs() -> Vec<CommandSpec> {
         label: "RE:ICA: Create Manga Page Groups",
         menu: &[],
         shortcut: None,
-        params: r##"{"first":1,"reverse":false,"selectedOnly":false,"autoClean":true,"round":true,"rectangle":true,"minSize":35,"threshold":225,"margin":3}"##,
+        params: r##"{"first":1,"reverse":false,"selectedOnly":false,"autoClean":true,"round":true,"rectangle":true,"sampleColor":false,"minSize":35,"threshold":225,"margin":3}"##,
         enabled: has_doc,
         run: create,
         journal: true,
@@ -307,7 +328,7 @@ mod tests {
         source.fill_rect(Rect::new(42, 65, 112, 71), &dark);
         let mut out = Surface::new(fmt);
         let opt =
-            Options { reverse: false, selected_only: false, clean: true, round: true, rectangle: true, threshold: 225, margin: 3, min_size: 35, first: 1 };
+            Options { reverse: false, selected_only: false, clean: true, round: true, rectangle: true, sample_color: false, threshold: 225, margin: 3, min_size: 35, first: 1 };
         assert_eq!(detect_and_fill(&source, &mut out, opt), 1);
         assert_eq!(source.rgba(50, 67)[0], 0.0);
         assert!(out.rgba(50, 67)[0] > 0.98);
