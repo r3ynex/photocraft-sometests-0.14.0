@@ -8,6 +8,7 @@ on:
       - feature/freeform-text-20261106
       - feature/reica-mangalab-20261106
       - feature/reica-mangalab-upstream-20261106
+      - feature/reica-mangalab-pages-20261116
   workflow_dispatch:
 
 permissions:

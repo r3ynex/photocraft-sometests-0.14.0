@@ -1,0 +1,75 @@
+name: REICA Pages - integrate current PhotoCraft upstream
+# Verify Pages + recent multi-view input compatibility before publishing.
+on:
+  push:
+    branches: [feature/reica-mangalab-pages-20261116]
+    paths: [".github/workflows/reica-pages-upstream.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Merge upstream and preserve REICA custom feature changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "REICA Upstream Integration"
+          git config user.email "actions@users.noreply.github.com"
+          git remote add upstream https://github.com/storytold/photocraft.git
+          git fetch --no-tags upstream main
+          echo "Upstream HEAD $(git rev-parse upstream/main)"
+          reica_before_merge=$(git rev-parse HEAD)
+          if ! git merge-base --is-ancestor upstream/main HEAD; then
+            git merge --no-ff --no-commit --strategy=ort -X ours upstream/main || true
+            if git ls-files -u | grep -q .; then
+              while IFS= read -r -d '' file; do
+                echo "Conflict: $file"
+                if git cat-file -e ":2:$file" 2>/dev/null; then
+                  git checkout --ours -- "$file"
+                  git add -- "$file"
+                elif git cat-file -e ":3:$file" 2>/dev/null; then
+                  git checkout --theirs -- "$file"
+                  git add -- "$file"
+                else
+                  git rm -f -- "$file"
+                fi
+              done < <(git diff --name-only --diff-filter=U -z)
+            fi
+            test -z "$(git ls-files -u)"
+            test -f .git/MERGE_HEAD
+            git commit -m "merge: upstream PhotoCraft into REICA MangaLab Pages"
+            # Preserve the known-good REICA font selector, which clashes with upstream refactor.
+            git show "$reica_before_merge:crates/ui-egui/src/tools/type_tool/options_bar.rs" > crates/ui-egui/src/tools/type_tool/options_bar.rs
+            if ! git diff --quiet -- crates/ui-egui/src/tools/type_tool/options_bar.rs; then
+              git add crates/ui-egui/src/tools/type_tool/options_bar.rs
+              git commit -m "fix(reica): keep compatible REICA type controls"
+            fi
+          fi
+          cargo metadata --format-version 1 > /dev/null
+          cargo fmt --all
+          if ! git diff --quiet -- Cargo.lock; then
+            git add Cargo.lock
+            git commit -m "build: update upstream Cargo.lock"
+          fi
+      - name: Check text UI and engine
+        run: cargo check -p photocraft-ui-egui -p photocraft-engine -p photocraft-reica
+      - name: Test page grouping and non-destructive bubble cleaning
+        run: cargo test -p photocraft-engine manga_pages_cmds --lib
+      - name: Include rustfmt corrections in verified merge
+        run: |
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m "style(reica): rustfmt upstream compatibility changes"
+          fi
+      - name: Publish compatible integration
+        run: git push origin HEAD:refs/heads/feature/reica-mangalab-pages-20261116
