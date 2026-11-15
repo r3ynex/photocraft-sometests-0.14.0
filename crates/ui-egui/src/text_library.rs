@@ -34,6 +34,7 @@ pub enum Tab {
     Fonts,
     Styles,
     Effects,
+    Pages,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -41,6 +42,7 @@ pub enum Tab {
 pub struct State {
     pub open: bool,
     pub effect: EffectSettings,
+    pub pages: PageSettings,
     pub tab: Tab,
     pub adding_font: bool,
     pub font_to_add: String,
@@ -65,6 +67,36 @@ impl EffectMode {
             Self::Random => "random",
             Self::Taper => "taper",
             Self::Alternate => "alternate",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PageSettings {
+    pub first: u32,
+    pub reverse: bool,
+    pub selected_only: bool,
+    pub auto_clean: bool,
+    pub round: bool,
+    pub rectangle: bool,
+    pub min_size: u32,
+    pub threshold: u32,
+    pub margin: u32,
+}
+
+impl Default for PageSettings {
+    fn default() -> Self {
+        Self {
+            first: 1,
+            reverse: false,
+            selected_only: true,
+            auto_clean: true,
+            round: true,
+            rectangle: true,
+            min_size: 35,
+            threshold: 225,
+            margin: 3,
         }
     }
 }
@@ -512,7 +544,7 @@ fn delete_style(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
 fn apply_card(app: &mut PhotocraftApp, tab: Tab, name: &str, styles: &[StylePreset]) -> Result<(), String> {
     match tab {
         Tab::Fonts => apply_font(app, name),
-        Tab::Effects => Err("Use Apply on the Effects tab".into()),
+        Tab::Effects | Tab::Pages => Err("This tab has no preset card to apply".into()),
         Tab::Styles => {
             let style = styles.iter().find(|s| s.name == name).ok_or("Style is no longer available")?;
             apply_style(app, style)
@@ -524,8 +556,77 @@ fn remove_card(app: &mut PhotocraftApp, tab: Tab, name: &str) -> Result<(), Stri
     match tab {
         Tab::Fonts => delete_font(app, name),
         Tab::Styles => delete_style(app, name),
-        Tab::Effects => Err("There is no effects library card to delete".into()),
+        Tab::Effects | Tab::Pages => Err("This tab has no library cards to delete".into()),
     }
+}
+
+/// Fourth RE:ICA MangaLab tab: batch page setup, conservative white-bubble clean.
+fn pages_panel(app: &mut PhotocraftApp, p: &mut PageSettings, ui: &mut egui::Ui) {
+    egui::ScrollArea::vertical()
+        .id_salt("reica-pages-panel")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            ui.heading("Manga Pages");
+            ui.label("Treat each selected top-level layer/group as one page of this PSD.");
+            ui.label("Page 001  /  clean / bubble_fills  +  source / original");
+            ui.add_space(5.0);
+            ui.checkbox(&mut p.selected_only, "Selected top-level layers only");
+            ui.checkbox(&mut p.reverse, "Reverse page numbering (bottom -> top)");
+            ui.horizontal(|ui| {
+                ui.label("First page number");
+                ui.add(egui::DragValue::new(&mut p.first).range(1..=99999).speed(1));
+            });
+            ui.separator();
+            ui.checkbox(&mut p.auto_clean, "Auto-fill speech bubbles on bubble_fills");
+            ui.add_enabled_ui(p.auto_clean, |ui| {
+                ui.checkbox(&mut p.round, "Detect round / oval");
+                ui.checkbox(&mut p.rectangle, "Detect rectangular");
+                ui.horizontal(|ui| {
+                    ui.label("Minimum size (px)");
+                    ui.add(egui::DragValue::new(&mut p.min_size).range(12..=1000));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("White threshold");
+                    ui.add(egui::Slider::new(&mut p.threshold, 150..=250));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Protect outline (px)");
+                    ui.add(egui::DragValue::new(&mut p.margin).range(0..=30));
+                });
+            });
+            ui.add_space(5.0);
+            ui.small("Non-destructive: all original layers are preserved inside source.");
+            ui.small("Auto-clean only handles light, closed bubbles on raster pages. Review every result; Undo reverses the operation.");
+            ui.small("For packed images or pages spread over multiple layers, group each page first.");
+            ui.add_space(7.0);
+            if ui.button("Create Page Groups + Clean").clicked() {
+                let params = json!({
+                    "first": p.first,
+                    "reverse": p.reverse,
+                    "selectedOnly": p.selected_only,
+                    "autoClean": p.auto_clean,
+                    "round": p.round,
+                    "rectangle": p.rectangle,
+                    "minSize": p.min_size,
+                    "threshold": p.threshold,
+                    "margin": p.margin,
+                });
+                match app.run("reica.mangaPages.create", params) {
+                    Ok(result) => {
+                        app.ui.status = format!(
+                            "RE:ICA Pages: {} page groups, {} bubbles cleaned. Check the new layers.",
+                            result["pages"].as_u64().unwrap_or(0),
+                            result["bubbles"].as_u64().unwrap_or(0),
+                        );
+                        app.ui.status_error = false;
+                    }
+                    Err(error) => {
+                        app.ui.status = error;
+                        app.ui.status_error = true;
+                    }
+                }
+            }
+        });
 }
 
 // Actual text shaped and rendered by PhotoCraft's text engine, with the saved
@@ -628,9 +729,10 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         ui.selectable_value(&mut state.tab, Tab::Fonts, "Fonts");
         ui.selectable_value(&mut state.tab, Tab::Styles, "Styles");
         ui.selectable_value(&mut state.tab, Tab::Effects, "Effects");
-        if state.tab != Tab::Effects {
+        ui.selectable_value(&mut state.tab, Tab::Pages, "Pages");
+        if state.tab != Tab::Effects && state.tab != Tab::Pages {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer", Tab::Effects => "Editable text effects" }).clicked() {
+            if ui.small_button("+").on_hover_text(match state.tab { Tab::Fonts => "Add an installed font", Tab::Styles => "Save effects from selected text layer", Tab::Effects => "Editable text effects", Tab::Pages => "Manga page preparation" }).clicked() {
                 match state.tab {
                     Tab::Fonts => {
                         state.adding_font = !state.adding_font;
@@ -642,7 +744,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                         let result = save_style(app);
                         message(app, result);
                     },
-                    Tab::Effects => {},
+                    Tab::Effects | Tab::Pages => {},
                 }
             }
         });
@@ -651,6 +753,11 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     ui.separator();
     if state.tab == Tab::Effects {
         effect_panel(app, &mut state.effect, ui);
+        return;
+    }
+
+    if state.tab == Tab::Pages {
+        pages_panel(app, &mut state.pages, ui);
         return;
     }
 
@@ -734,7 +841,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     let names: Vec<String> = match state.tab {
         Tab::Fonts => fonts,
         Tab::Styles => styles.iter().map(|s| s.name.clone()).collect(),
-        Tab::Effects => Vec::new(),
+        Tab::Effects | Tab::Pages => Vec::new(),
     };
 
     // No min-width growth: a fixed three-column grid must never dictate the
@@ -745,6 +852,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             Tab::Fonts => "Click + to add a font to this group",
             Tab::Styles => "Select a text layer with effects and click +",
             Tab::Effects => "Choose an effect and click Apply",
+            Tab::Pages => "Select page layers and create page groups",
         });
     }
     // Only the scroll content consumes rows. The fixed header and trash stay in place.
