@@ -1352,7 +1352,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::type_caret_cmds::specs());
     v.extend(crate::smart_cmds::specs());
     v.extend(crate::layer_multi_cmds::specs());
-    v.extend(crate::manga_pages_cmds::specs());
+    v.extend(manga_pages_cmds::specs());
     v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::updates_cmds::specs());
