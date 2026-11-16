@@ -34,6 +34,8 @@ pub mod file_dialog;
 pub mod font_pack;
 // RE:ICA MangaLab native type library and editable glyph controls.
 pub mod text_library;
+/// Offline Japanese Manga OCR and translation overlay UI.
+pub mod reica_translate;
 pub mod freeform_text;
 pub mod file_open;
 pub mod frame_stages;
