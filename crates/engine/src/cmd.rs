@@ -101,6 +101,10 @@ pub mod layer_list_cmds;
 pub mod layer_mask_props_cmds;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
+/// RE:ICA manga page grouping.
+pub mod manga_pages_cmds;
+/// RE:ICA OCR translation and bake commands.
+pub mod reica_translate_cmds;
 pub mod layer_nav_cmds;
 mod layer_params;
 mod layer_references;
@@ -1350,6 +1354,8 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::type_caret_cmds::specs());
     v.extend(crate::smart_cmds::specs());
     v.extend(crate::layer_multi_cmds::specs());
+    v.extend(manga_pages_cmds::specs());
+    v.extend(reica_translate_cmds::specs());
     v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::updates_cmds::specs());
