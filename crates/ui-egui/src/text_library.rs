@@ -35,6 +35,7 @@ pub enum Tab {
     Styles,
     Effects,
     Pages,
+    Translate,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -43,6 +44,7 @@ pub struct State {
     pub open: bool,
     pub effect: EffectSettings,
     pub pages: PageSettings,
+    pub translate: crate::reica_translate::Settings,
     pub tab: Tab,
     pub adding_font: bool,
     pub font_to_add: String,
@@ -529,7 +531,7 @@ fn delete_style(app: &mut PhotocraftApp, name: &str) -> Result<(), String> {
 fn apply_card(app: &mut PhotocraftApp, tab: Tab, name: &str, styles: &[StylePreset]) -> Result<(), String> {
     match tab {
         Tab::Fonts => apply_font(app, name),
-        Tab::Effects | Tab::Pages => Err("This tab has no preset card to apply".into()),
+        Tab::Effects | Tab::Pages | Tab::Translate => Err("This tab has no preset card to apply".into()),
         Tab::Styles => {
             let style = styles.iter().find(|s| s.name == name).ok_or("Style is no longer available")?;
             apply_style(app, style)
@@ -541,7 +543,7 @@ fn remove_card(app: &mut PhotocraftApp, tab: Tab, name: &str) -> Result<(), Stri
     match tab {
         Tab::Fonts => delete_font(app, name),
         Tab::Styles => delete_style(app, name),
-        Tab::Effects | Tab::Pages => Err("This tab has no library cards to delete".into()),
+        Tab::Effects | Tab::Pages | Tab::Translate => Err("This tab has no library cards to delete".into()),
     }
 }
 
@@ -720,7 +722,8 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
         ui.selectable_value(&mut state.tab, Tab::Styles, "Styles");
         ui.selectable_value(&mut state.tab, Tab::Effects, "Effects");
         ui.selectable_value(&mut state.tab, Tab::Pages, "Pages");
-        if state.tab != Tab::Effects && state.tab != Tab::Pages {
+        ui.selectable_value(&mut state.tab, Tab::Translate, "Translate");
+        if state.tab != Tab::Effects && state.tab != Tab::Pages && state.tab != Tab::Translate {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
                     .small_button("+")
@@ -729,6 +732,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                         Tab::Styles => "Save effects from selected text layer",
                         Tab::Effects => "Editable text effects",
                         Tab::Pages => "Manga page preparation",
+                        Tab::Translate => "Japanese OCR / translation overlays",
                     })
                     .clicked()
                 {
@@ -743,7 +747,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
                             let result = save_style(app);
                             message(app, result);
                         }
-                        Tab::Effects | Tab::Pages => {}
+                        Tab::Effects | Tab::Pages | Tab::Translate => {}
                     }
                 }
             });
@@ -757,6 +761,10 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
 
     if state.tab == Tab::Pages {
         pages_panel(app, &mut state.pages, ui);
+        return;
+    }
+    if state.tab == Tab::Translate {
+        crate::reica_translate::panel(app, &mut state.translate, ui);
         return;
     }
 
@@ -846,7 +854,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
     let names: Vec<String> = match state.tab {
         Tab::Fonts => fonts,
         Tab::Styles => styles.iter().map(|s| s.name.clone()).collect(),
-        Tab::Effects | Tab::Pages => Vec::new(),
+        Tab::Effects | Tab::Pages | Tab::Translate => Vec::new(),
     };
 
     // No min-width growth: a fixed three-column grid must never dictate the
@@ -858,6 +866,7 @@ fn body(app: &mut PhotocraftApp, state: &mut State, ui: &mut egui::Ui) {
             Tab::Styles => "Select a text layer with effects and click +",
             Tab::Effects => "Choose an effect and click Apply",
             Tab::Pages => "Select page layers and create page groups",
+            Tab::Translate => "Recognize Japanese text on a selected region",
         });
     }
     // Only the scroll content consumes rows. The fixed header and trash stay in place.
