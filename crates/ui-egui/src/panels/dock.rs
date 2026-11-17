@@ -66,6 +66,17 @@ fn rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: &Tokens) {
                     }
                 }
             }
+            // RE:ICA MangaLab has its own dock panel, not a Photoshop group toggle.
+            // Keep this rail icon independent of the Character/Paragraph group's state.
+            ui.add_space(4.0);
+            let manga_open = crate::panel_docking::checked(app, "window.panel.textLibrary").unwrap_or(false);
+            if icons::rail_button(ui, "mangalab", rb, manga_open, "RE:ICA MangaLab").clicked() {
+                let result = app.run("window.panel.textLibrary", serde_json::json!({ "show": !manga_open }));
+                if let Err(error) = result {
+                    app.ui.status = error;
+                    app.ui.status_error = true;
+                }
+            }
         });
 }
 
