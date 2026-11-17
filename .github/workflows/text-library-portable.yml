@@ -9,6 +9,7 @@ on:
       - feature/reica-mangalab-20261106
       - feature/reica-mangalab-upstream-20261106
       - feature/reica-mangalab-translate-stable-20261116
+      - feature/reica-anime-seg-skytnt-20261117
   workflow_dispatch:
 
 permissions:
@@ -48,6 +49,10 @@ jobs:
           cargo test --locked -p photocraft-ui-egui reica_mangalab_panel_tests --lib
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --locked -p photocraft-ui-egui embedding_tests --lib
+
+      - name: Test SkyTNT soft-mask import
+        shell: pwsh
+        run: cargo test --locked -p photocraft-engine reica_anime_select_cmds --lib
 
       - name: Test REICA Pages and translation overlays
         shell: pwsh
