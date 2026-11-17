@@ -40,8 +40,8 @@ mod tests {
     fn models_are_anchored_to_exe_not_python_or_current_directory() {
         let root = next_to_executable(Path::new("portable/photocraft-reica.exe")).unwrap();
         assert_eq!(root, PathBuf::from("portable").join("models"));
-        assert_eq!(root.join("skytnt"), PathBuf::from("portable/models/skytnt"));
-        assert_eq!(root.join("manga-ocr"), PathBuf::from("portable/models/manga-ocr"));
+        assert_eq!(root.join("skytnt"), PathBuf::from("portable").join("models").join("skytnt"));
+        assert_eq!(root.join("manga-ocr"), PathBuf::from("portable").join("models").join("manga-ocr"));
     }
 
     #[test]
