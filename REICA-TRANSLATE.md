@@ -76,3 +76,8 @@ Manga OCR's actual Python API is `from manga_ocr import MangaOcr; mocr = MangaOc
 - `crates/engine/src/cmd.rs`: engine registration.
 
 The feature branch is `feature/reica-mangalab-translate-20261116`. Keep previous known-good MangaLab branches intact until compilation, regression tests and hands-on PSD verification all pass.
+
+## Windows build / troubleshooting
+
+Download the **REICA-MangaLab-Windows-Portable** artifact from the successful *REICA MangaLab Windows Portable* run under GitHub Actions on this feature branch. The workflow's green status means the executable compiled; the repository's separate full CI may show a red cross for formatting or Clippy issues unrelated to packaging. Always select the run by **branch and SHA**, not the older unverified upstream-merge branch.
+
