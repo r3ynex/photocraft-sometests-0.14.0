@@ -66,10 +66,15 @@ fn validate_name(value: &str, maximum: usize, what: &str) -> Result<(), String> 
 }
 
 fn extension(bytes: &[u8]) -> Result<&'static str, String> {
-    if bytes.starts_with(b"OTTO") { Ok("otf") }
-    else if bytes.starts_with(b"ttcf") { Ok("ttc") }
-    else if bytes.starts_with(b"true") || bytes.starts_with(&[0, 1, 0, 0]) { Ok("ttf") }
-    else { Err("A font in the pack is not a supported TTF, OTF or font collection".into()) }
+    if bytes.starts_with(b"OTTO") {
+        Ok("otf")
+    } else if bytes.starts_with(b"ttcf") {
+        Ok("ttc")
+    } else if bytes.starts_with(b"true") || bytes.starts_with(&[0, 1, 0, 0]) {
+        Ok("ttf")
+    } else {
+        Err("A font in the pack is not a supported TTF, OTF or font collection".into())
+    }
 }
 
 /// Export a complete ZIP pack from the binaries already resolved by the text engine.
@@ -132,11 +137,9 @@ pub fn decode(bytes: &[u8]) -> Result<FontPack, String> {
     if bytes.len() > MAX_ARCHIVE {
         return Err("Font pack archive exceeds the 160 MiB limit".into());
     }
-    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| format!("Invalid .pcraftfp ZIP archive: {e}"))?;
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("Invalid .pcraftfp ZIP archive: {e}"))?;
     let manifest = {
-        let entry = zip.by_name("manifest.json")
-            .map_err(|_| "Font pack has no manifest.json".to_string())?;
+        let entry = zip.by_name("manifest.json").map_err(|_| "Font pack has no manifest.json".to_string())?;
         if entry.size() as usize > MAX_MANIFEST_BYTES {
             return Err("Font pack manifest is too large".into());
         }
@@ -170,7 +173,8 @@ pub fn decode(bytes: &[u8]) -> Result<FontPack, String> {
         let mut files = Vec::new();
         for path in item.files {
             count += 1;
-            if count > MAX_BINARY_FILES || !seen_paths.insert(path.clone())
+            if count > MAX_BINARY_FILES
+                || !seen_paths.insert(path.clone())
                 || !path.starts_with("fonts/")
                 || path[6..].contains('/')
                 || path[6..].contains('\\')
@@ -237,9 +241,8 @@ pub fn merge(prefs: &mut Preferences, group: &str, names: &[String]) -> ImportSu
 }
 
 pub fn suggested_filename(name: &str) -> String {
-    let safe = name.chars().map(|ch| {
-        if ch.is_control() || matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { ch }
-    }).collect::<String>();
+    let safe =
+        name.chars().map(|ch| if ch.is_control() || matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { ch }).collect::<String>();
     let stem = safe.trim().trim_matches('.').trim();
     format!("{}.{}", if stem.is_empty() { "FontGroup" } else { stem }, EXTENSION)
 }
@@ -264,7 +267,9 @@ pub fn persist_fonts(directory: &Path, pack: &FontPack) -> Result<usize, String>
             data.hash(&mut h);
             let ext = extension(data)?;
             let filename = format!("{:016x}-{:08x}.{ext}", h.finish(), data.len());
-            if !stored.insert(filename.clone()) { continue; }
+            if !stored.insert(filename.clone()) {
+                continue;
+            }
             let target = directory.join(filename);
             if target.exists() {
                 let existing = std::fs::read(&target).map_err(|e| e.to_string())?;
@@ -294,20 +299,32 @@ pub fn load_persisted_fonts(directory: &Path) -> usize {
     let mut files = Vec::new();
     for item in rd.flatten().take(MAX_BINARY_FILES) {
         let path = item.path();
-        if !path.is_file() { continue; }
-        if !matches!(path.extension().and_then(|e| e.to_str()), Some("ttf" | "otf" | "ttc")) { continue; }
+        if !path.is_file() {
+            continue;
+        }
+        if !matches!(path.extension().and_then(|e| e.to_str()), Some("ttf" | "otf" | "ttc")) {
+            continue;
+        }
         if let Ok(meta) = path.metadata() {
-            if meta.len() as usize > MAX_FONT_BYTES { continue; }
+            if meta.len() as usize > MAX_FONT_BYTES {
+                continue;
+            }
         }
         if let Ok(data) = std::fs::read(path) {
-            if extension(&data).is_ok() { files.push(data); }
+            if extension(&data).is_ok() {
+                files.push(data);
+            }
         }
     }
-    if files.is_empty() { return 0 }
+    if files.is_empty() {
+        return 0;
+    }
     let mut imported = 0;
     if let Ok(mut engine) = photocraft_text::shared().lock() {
         for bytes in files {
-            if !engine.fonts.register_font_data(bytes).is_empty() { imported += 1; }
+            if !engine.fonts.register_font_data(bytes).is_empty() {
+                imported += 1;
+            }
         }
     }
     imported
@@ -323,9 +340,7 @@ mod tests {
 
     #[test]
     fn font_pack_roundtrip_includes_actual_binary_and_unicode_group() {
-        let bytes = encode("Манга / SFX", &[FontFamily {
-            family: "Inter".into(), files: vec![font()],
-        }]).unwrap();
+        let bytes = encode("Манга / SFX", &[FontFamily { family: "Inter".into(), files: vec![font()] }]).unwrap();
         assert!(bytes.starts_with(b"PK"));
         let archive = decode(&bytes).unwrap();
         assert_eq!(archive.group, "Манга / SFX");
@@ -349,9 +364,7 @@ mod tests {
     #[test]
     fn installed_files_are_persistent_and_idempotent() {
         let dir = tempfile::tempdir().unwrap();
-        let bytes = encode("Manga Fonts", &[FontFamily {
-            family: "Inter".into(), files: vec![font()],
-        }]).unwrap();
+        let bytes = encode("Manga Fonts", &[FontFamily { family: "Inter".into(), files: vec![font()] }]).unwrap();
         let pack = decode(&bytes).unwrap();
         assert_eq!(persist_fonts(dir.path(), &pack).unwrap(), 1);
         assert_eq!(persist_fonts(dir.path(), &pack).unwrap(), 0);

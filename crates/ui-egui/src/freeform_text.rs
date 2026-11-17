@@ -4,8 +4,8 @@
 //! stored as UTF-8 byte runs. The existing type.edit command converts between
 //! the two and moves run boundaries when the text changes.
 use egui::{Color32, Modifiers, Painter, Pos2, Stroke, vec2};
-use photocraft_doc::{LayerContent, LayerId};
 use photocraft_doc::text::CharStyle;
+use photocraft_doc::{LayerContent, LayerId};
 use photocraft_geom::{Affine, Point};
 use serde_json::json;
 
@@ -109,10 +109,13 @@ fn handles(app: &mut PhotocraftApp) -> Vec<Handle> {
         let Some(layer) = st.doc.layer(id) else { return Vec::new() };
         let LayerContent::Text(t) = &layer.content else { return Vec::new() };
         let mut end = 0;
-        t.char_runs().into_iter().map(|r| {
-            end += r.len;
-            end
-        }).collect::<Vec<_>>()
+        t.char_runs()
+            .into_iter()
+            .map(|r| {
+                end += r.len;
+                end
+            })
+            .collect::<Vec<_>>()
     };
     let mut out = Vec::new();
     for cluster in &layout.clusters {
@@ -127,14 +130,8 @@ fn handles(app: &mut PhotocraftApp) -> Vec<Handle> {
         let Some(style) = layout.styles.get(run).cloned() else { continue };
         // Cluster midpoints are stable caret-space anchors, including for UTF-8
         // and combined glyphs. The offset from Freeform Text is applied after.
-        let (tx, ty) = layout.to_text(
-            cluster.x + cluster.advance * 0.5,
-            line.baseline - style.size_pt * layout.px_per_pt * 0.4,
-        );
-        let p = transform.apply(Point::new(
-            f64::from(tx + style.freeform_x),
-            f64::from(ty + style.freeform_y),
-        ));
+        let (tx, ty) = layout.to_text(cluster.x + cluster.advance * 0.5, line.baseline - style.size_pt * layout.px_per_pt * 0.4);
+        let p = transform.apply(Point::new(f64::from(tx + style.freeform_x), f64::from(ty + style.freeform_y)));
         let em = (style.size_pt.abs() * layout.px_per_pt * style.freeform_scale.abs()).max(0.0);
         let (ex, ey) = layout.to_text(0.0, em);
         let origin = transform.apply(Point::new(0.0, 0.0));
@@ -227,15 +224,23 @@ fn hit(app: &mut PhotocraftApp, xf: &ViewXform, pointer: Pos2) -> Option<(Handle
 
 fn apply(app: &mut PhotocraftApp, layer: u64, key: &str, changes: &[(usize, usize, CharStyle)]) {
     // One type.edit command, and one undo step for the entire group drag.
-    let runs: Vec<_> = changes.iter().map(|(start, end, style)| json!({
-        "start": start, "end": end.max(&(start + 1)),
-        "freeformX": style.freeform_x, "freeformY": style.freeform_y,
-        "freeformAngle": style.freeform_angle,
-        "freeformScale": style.freeform_scale,
-    })).collect();
-    if let Err(e) = app.run("type.edit", json!({
-        "layer": layer, "runs": runs, "coalesce": key,
-    })) {
+    let runs: Vec<_> = changes
+        .iter()
+        .map(|(start, end, style)| {
+            json!({
+                "start": start, "end": end.max(&(start + 1)),
+                "freeformX": style.freeform_x, "freeformY": style.freeform_y,
+                "freeformAngle": style.freeform_angle,
+                "freeformScale": style.freeform_scale,
+            })
+        })
+        .collect();
+    if let Err(e) = app.run(
+        "type.edit",
+        json!({
+            "layer": layer, "runs": runs, "coalesce": key,
+        }),
+    ) {
         app.ui.status = e;
         app.ui.status_error = true;
     }
@@ -270,30 +275,33 @@ fn transformed(d: &Drag, at: [f64; 2], shift: bool) -> Vec<(usize, usize, CharSt
     let (sin, cos) = turn.to_radians().sin_cos();
     let old_radius = (start[0] - pivot[0]).hypot(start[1] - pivot[1]).max(0.001);
     let scale = ((now[0] - pivot[0]).hypot(now[1] - pivot[1]) / old_radius).clamp(0.1, 20.0);
-    d.targets.iter().map(|target| {
-        let mut style = target.before.clone();
-        let current = local(d.transform, target.center);
-        match d.kind {
-            HandleKind::Move => {
-                style.freeform_x += translate[0] as f32;
-                style.freeform_y += translate[1] as f32;
+    d.targets
+        .iter()
+        .map(|target| {
+            let mut style = target.before.clone();
+            let current = local(d.transform, target.center);
+            match d.kind {
+                HandleKind::Move => {
+                    style.freeform_x += translate[0] as f32;
+                    style.freeform_y += translate[1] as f32;
+                }
+                HandleKind::Rotate => {
+                    let dx = current[0] - pivot[0];
+                    let dy = current[1] - pivot[1];
+                    let after = [pivot[0] + cos * dx - sin * dy, pivot[1] + sin * dx + cos * dy];
+                    style.freeform_x += (after[0] - current[0]) as f32;
+                    style.freeform_y += (after[1] - current[1]) as f32;
+                    style.freeform_angle += turn as f32;
+                }
+                HandleKind::Scale => {
+                    style.freeform_x += ((current[0] - pivot[0]) * (scale - 1.0)) as f32;
+                    style.freeform_y += ((current[1] - pivot[1]) * (scale - 1.0)) as f32;
+                    style.freeform_scale = (style.freeform_scale * scale as f32).clamp(0.1, 20.0);
+                }
             }
-            HandleKind::Rotate => {
-                let dx = current[0] - pivot[0];
-                let dy = current[1] - pivot[1];
-                let after = [pivot[0] + cos * dx - sin * dy, pivot[1] + sin * dx + cos * dy];
-                style.freeform_x += (after[0] - current[0]) as f32;
-                style.freeform_y += (after[1] - current[1]) as f32;
-                style.freeform_angle += turn as f32;
-            }
-            HandleKind::Scale => {
-                style.freeform_x += ((current[0] - pivot[0]) * (scale - 1.0)) as f32;
-                style.freeform_y += ((current[1] - pivot[1]) * (scale - 1.0)) as f32;
-                style.freeform_scale = (style.freeform_scale * scale as f32).clamp(0.1, 20.0);
-            }
-        }
-        (target.index, target.end_index, style)
-    }).collect()
+            (target.index, target.end_index, style)
+        })
+        .collect()
 }
 
 pub fn pointer(app: &mut PhotocraftApp, event: ToolEvent, mods: Modifiers) -> bool {
@@ -328,16 +336,20 @@ pub fn pointer(app: &mut PhotocraftApp, event: ToolEvent, mods: Modifiers) -> bo
     let Some(xf) = ViewXform::active(app) else { return false };
     let Some((h, kind)) = hit(app, &xf, screen(&xf, [x, y])) else {
         // Clicking a normal Type region still operates its caret as before.
-        if !mods.shift { app.ui.freeform_selection = None; }
+        if !mods.shift {
+            app.ui.freeform_selection = None;
+        }
         return false;
     };
     let doc = match app.session.active() {
         Some(st) => st.doc.id.0,
         None => return false,
     };
-    let mut selected = app.ui.freeform_selection.clone()
-        .filter(|s| s.document == doc && s.layer == h.layer.0)
-        .unwrap_or(Selection { document: doc, layer: h.layer.0, indices: Vec::new() });
+    let mut selected = app.ui.freeform_selection.clone().filter(|s| s.document == doc && s.layer == h.layer.0).unwrap_or(Selection {
+        document: doc,
+        layer: h.layer.0,
+        indices: Vec::new(),
+    });
 
     if mods.shift {
         // Shift-click adds/removes one arbitrary character; handles never turn
@@ -365,30 +377,17 @@ pub fn pointer(app: &mut PhotocraftApp, event: ToolEvent, mods: Modifiers) -> bo
         apply(app, h.layer.0, &key, &[(h.index, h.end_index, style)]);
         return true;
     }
-    let targets: Vec<DragTarget> = handles(app).into_iter().filter(|handle| {
-        handle.layer == h.layer && selected.indices.contains(&handle.index)
-    }).map(|handle| DragTarget {
-        index: handle.index,
-        end_index: handle.end_index,
-        center: handle.center,
-        before: handle.style,
-    }).collect();
-    if targets.is_empty() { return true; }
+    let targets: Vec<DragTarget> = handles(app)
+        .into_iter()
+        .filter(|handle| handle.layer == h.layer && selected.indices.contains(&handle.index))
+        .map(|handle| DragTarget { index: handle.index, end_index: handle.end_index, center: handle.center, before: handle.style })
+        .collect();
+    if targets.is_empty() {
+        return true;
+    }
     let n = targets.len() as f64;
-    let pivot = [
-        targets.iter().map(|t| t.center[0]).sum::<f64>() / n,
-        targets.iter().map(|t| t.center[1]).sum::<f64>() / n,
-    ];
-    app.ui.freeform_drag = Some(Drag {
-        document: doc,
-        layer: h.layer.0,
-        kind,
-        start: [x, y],
-        pivot,
-        transform: h.transform,
-        targets,
-        undo_key: key,
-    });
+    let pivot = [targets.iter().map(|t| t.center[0]).sum::<f64>() / n, targets.iter().map(|t| t.center[1]).sum::<f64>() / n];
+    app.ui.freeform_drag = Some(Drag { document: doc, layer: h.layer.0, kind, start: [x, y], pivot, transform: h.transform, targets, undo_key: key });
     true
 }
 
@@ -397,10 +396,7 @@ mod tests {
     use super::*;
 
     fn target(index: usize, x: f64) -> DragTarget {
-        DragTarget {
-            index, end_index: index + 1, center: [x, 0.0],
-            before: CharStyle::default(),
-        }
+        DragTarget { index, end_index: index + 1, center: [x, 0.0], before: CharStyle::default() }
     }
 
     #[test]
@@ -430,8 +426,11 @@ mod tests {
     #[test]
     fn selected_glyphs_move_together_without_reflow() {
         let d = Drag {
-            document: 1, layer: 2, kind: HandleKind::Move,
-            start: [0.0, 0.0], pivot: [20.0, 0.0],
+            document: 1,
+            layer: 2,
+            kind: HandleKind::Move,
+            start: [0.0, 0.0],
+            pivot: [20.0, 0.0],
             transform: Affine::IDENTITY,
             targets: vec![target(0, 10.0), target(2, 30.0)],
             undo_key: String::new(),
@@ -447,8 +446,11 @@ mod tests {
     #[test]
     fn group_scaling_moves_centres_about_pivot() {
         let d = Drag {
-            document: 1, layer: 2, kind: HandleKind::Scale,
-            start: [30.0, 0.0], pivot: [20.0, 0.0],
+            document: 1,
+            layer: 2,
+            kind: HandleKind::Scale,
+            start: [30.0, 0.0],
+            pivot: [20.0, 0.0],
             transform: Affine::IDENTITY,
             targets: vec![target(0, 10.0), target(2, 30.0)],
             undo_key: String::new(),

@@ -37,8 +37,6 @@ pub mod new_layer;
 mod param_check;
 mod pixels;
 pub mod prefs;
-/// Editable RE:ICA MangaLab character text effects.
-pub mod text_effects;
 pub mod preset_store;
 pub mod presets;
 pub mod proof_sim;
@@ -47,6 +45,8 @@ pub mod select_mask_edits;
 pub mod shell_commands;
 pub mod shortcut_sets;
 pub mod snap;
+/// Editable RE:ICA MangaLab character text effects.
+pub mod text_effects;
 pub use variables_cmds::{export_data_sets_with, import_data_sets_text};
 pub use video_cmds::render_video_with;
 

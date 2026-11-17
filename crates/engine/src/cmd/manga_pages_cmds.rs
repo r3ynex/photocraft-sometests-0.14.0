@@ -134,7 +134,9 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
             miny = miny.min(y);
             maxy = maxy.max(y);
             component.push(i);
-            for c in 0..3 { sum[c] += u64::from(rgba[i][c]); }
+            for c in 0..3 {
+                sum[c] += u64::from(rgba[i][c]);
+            }
             area += 1;
             if x == 0 || y == 0 || x + 1 == w || y + 1 == h {
                 at_border = true;
@@ -206,9 +208,10 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
         }
         // One thin opaque scanline per row. The transparent output remains fully editable.
         let color = if o.sample_color {
-            [sum[0] as f32 / area as f32 / 255.0, sum[1] as f32 / area as f32 / 255.0,
-             sum[2] as f32 / area as f32 / 255.0, 1.0]
-        } else { [1.0, 1.0, 1.0, 1.0] };
+            [sum[0] as f32 / area as f32 / 255.0, sum[1] as f32 / area as f32 / 255.0, sum[2] as f32 / area as f32 / 255.0, 1.0]
+        } else {
+            [1.0, 1.0, 1.0, 1.0]
+        };
         let paint = from_rgba(&output.format(), color);
         let mut did_paint = false;
         for y in 0..bh {
@@ -220,7 +223,10 @@ fn detect_and_fill(source: &Surface, output: &mut Surface, o: Options) -> usize 
             if x1 <= x0 {
                 continue;
             }
-            output.fill_rect(Rect::new(rect.x0 + x0 as i32, rect.y0 + miny as i32 + y as i32, rect.x0 + x1 as i32 + 1, rect.y0 + miny as i32 + y as i32 + 1), &paint);
+            output.fill_rect(
+                Rect::new(rect.x0 + x0 as i32, rect.y0 + miny as i32 + y as i32, rect.x0 + x1 as i32 + 1, rect.y0 + miny as i32 + y as i32 + 1),
+                &paint,
+            );
             did_paint = true;
         }
         if did_paint {
@@ -327,8 +333,18 @@ mod tests {
         // Put black lettering inside the light bubble.
         source.fill_rect(Rect::new(42, 65, 112, 71), &dark);
         let mut out = Surface::new(fmt);
-        let opt =
-            Options { reverse: false, selected_only: false, clean: true, round: true, rectangle: true, sample_color: false, threshold: 225, margin: 3, min_size: 35, first: 1 };
+        let opt = Options {
+            reverse: false,
+            selected_only: false,
+            clean: true,
+            round: true,
+            rectangle: true,
+            sample_color: false,
+            threshold: 225,
+            margin: 3,
+            min_size: 35,
+            first: 1,
+        };
         assert_eq!(detect_and_fill(&source, &mut out, opt), 1);
         assert_eq!(source.rgba(50, 67)[0], 0.0);
         assert!(out.rgba(50, 67)[0] > 0.98);

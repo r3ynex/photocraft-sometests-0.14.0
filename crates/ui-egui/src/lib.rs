@@ -33,12 +33,9 @@ pub(crate) mod edit_session;
 pub mod file_dialog;
 pub mod font_pack;
 // RE:ICA MangaLab native type library and editable glyph controls.
-pub mod text_library;
-/// Offline Japanese Manga OCR and translation overlays.
-pub mod reica_translate;
-pub mod freeform_text;
 pub mod file_open;
 pub mod frame_stages;
+pub mod freeform_text;
 pub mod gpu_memo;
 pub mod gpu_status;
 pub mod home_recent_ui;
@@ -57,10 +54,13 @@ pub mod os_window;
 pub mod panels;
 pub mod preset_files_ui;
 pub mod proxy;
+/// Offline Japanese Manga OCR and translation overlays.
+pub mod reica_translate;
 pub mod render_path;
 pub mod screenshot;
 pub mod state;
 pub mod texel_guard;
+pub mod text_library;
 pub mod theme;
 pub use titlebar::{Caption, CaptionFamily, CaptionIcon, CaptionIcons, CaptionStyle, RenderIconFn};
 pub(crate) mod tool_memory;

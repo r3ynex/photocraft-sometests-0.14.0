@@ -101,16 +101,14 @@ pub mod layer_list_cmds;
 pub mod layer_mask_props_cmds;
 pub mod layer_menu_cmds;
 pub mod layer_multi_cmds;
-/// RE:ICA manga page grouping.
-pub mod manga_pages_cmds;
-/// RE:ICA OCR translation and bake commands.
-pub mod reica_translate_cmds;
 pub mod layer_nav_cmds;
 mod layer_params;
 mod layer_references;
 pub mod layer_xmp_cmds;
 pub mod lens_cmds;
 pub mod magnetic_cmds;
+/// RE:ICA manga page grouping.
+pub mod manga_pages_cmds;
 pub mod mask_view_cmds;
 pub(super) mod migrate_cmds;
 pub mod mode_cmds;
@@ -130,6 +128,8 @@ pub mod preset_import_cmds;
 pub mod print_cmds;
 pub mod rasterize_style_cmds;
 pub mod redeye_cmds;
+/// RE:ICA OCR translation and bake commands.
+pub mod reica_translate_cmds;
 pub mod render_cmds;
 pub mod retouch_cmds;
 pub mod sample_cmds;

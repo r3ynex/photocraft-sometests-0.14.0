@@ -90,7 +90,18 @@ pub struct PageSettings {
 
 impl Default for PageSettings {
     fn default() -> Self {
-        Self { first: 1, reverse: false, selected_only: true, auto_clean: true, round: true, rectangle: true, sample_color: false, min_size: 35, threshold: 225, margin: 3 }
+        Self {
+            first: 1,
+            reverse: false,
+            selected_only: true,
+            auto_clean: true,
+            round: true,
+            rectangle: true,
+            sample_color: false,
+            min_size: 35,
+            threshold: 225,
+            margin: 3,
+        }
     }
 }
 

@@ -1,8 +1,8 @@
 //! RE:ICA MangaLab local Japanese OCR. No localhost server, no cloud upload:
 //! a private long-lived Python child process receives cropped RGBA through stdin.
+use crate::PhotocraftApp;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use crate::PhotocraftApp;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -19,9 +19,13 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            python: "python".into(), original: String::new(),
-            translated: String::new(), font_size: 18.0, box_xywh: [0; 4],
-            doc_id: 0, auto_bake: false,
+            python: "python".into(),
+            original: String::new(),
+            translated: String::new(),
+            font_size: 18.0,
+            box_xywh: [0; 4],
+            doc_id: 0,
+            auto_bake: false,
             status: "Select a speech bubble with Rectangular Marquee to recognize it.".into(),
         }
     }
@@ -29,10 +33,10 @@ impl Default for Settings {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native {
+    use super::*;
     use std::io::{BufRead, BufReader, Write};
     use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
     use std::sync::{Mutex, OnceLock};
-    use super::*;
 
     const MAX_PIXELS: u64 = 9_000_000;
     const PYTHON_HELPER: &str = include_str!("../../../tools/reica_manga_ocr/worker.py");
@@ -53,10 +57,15 @@ mod native {
 
     fn new_worker(python: &str) -> Result<Worker, String> {
         let mut child = Command::new(python)
-            .arg("-u").arg("-c").arg(PYTHON_HELPER)
-            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::inherit())
+            .arg("-u")
+            .arg("-c")
+            .arg(PYTHON_HELPER)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
             .env("PYTHONIOENCODING", "utf-8")
-            .spawn().map_err(|e| format!("Cannot launch Python ({python}): {e}"))?;
+            .spawn()
+            .map_err(|e| format!("Cannot launch Python ({python}): {e}"))?;
         let stdin = child.stdin.take().ok_or("Python stdin unavailable")?;
         let stdout = child.stdout.take().ok_or("Python stdout unavailable")?;
         Ok(Worker { command: python.into(), child, stdin, stdout: BufReader::new(stdout) })
@@ -81,15 +90,15 @@ mod native {
             if session.stdout.read_line(&mut line).map_err(|e| e.to_string())? == 0 {
                 return Err("OCR process ended. Install: python -m pip install manga-ocr pillow".into());
             }
-            let response: Value = serde_json::from_str(&line)
-                .map_err(|_| "Invalid response from local OCR process".to_string())?;
+            let response: Value = serde_json::from_str(&line).map_err(|_| "Invalid response from local OCR process".to_string())?;
             if let Some(error) = response.get("error").and_then(Value::as_str) {
                 return Err(error.to_owned());
             }
-            response.get("text").and_then(Value::as_str).map(str::to_owned)
-                .ok_or_else(|| "OCR did not return text".to_string())
+            response.get("text").and_then(Value::as_str).map(str::to_owned).ok_or_else(|| "OCR did not return text".to_string())
         })();
-        if result.is_err() { *worker = None; }
+        if result.is_err() {
+            *worker = None;
+        }
         result
     }
 
@@ -98,10 +107,14 @@ mod native {
         result: Option<(u64, [i32; 4], Result<String, String>)>,
     }
     impl Default for OcrJob {
-        fn default() -> Self { Self { running: false, result: None } }
+        fn default() -> Self {
+            Self { running: false, result: None }
+        }
     }
     static JOB: OnceLock<Mutex<OcrJob>> = OnceLock::new();
-    fn job() -> &'static Mutex<OcrJob> { JOB.get_or_init(|| Mutex::new(OcrJob::default())) }
+    fn job() -> &'static Mutex<OcrJob> {
+        JOB.get_or_init(|| Mutex::new(OcrJob::default()))
+    }
 
     fn hide_translation(layers: &mut [photocraft_doc::Layer]) {
         for layer in layers {
@@ -115,11 +128,17 @@ mod native {
     pub(super) fn start(app: &PhotocraftApp, settings: &mut Settings, ui: &egui::Ui) {
         let state = match app.session.active() {
             Some(state) => state,
-            None => { settings.status = "Open a PSD/document first".into(); return; }
+            None => {
+                settings.status = "Open a PSD/document first".into();
+                return;
+            }
         };
         let rect = match &state.doc.selection {
             Some(mask) => mask.content_bounds().intersect(&state.doc.bounds()),
-            None => { settings.status = "Select a bubble with Rectangular Marquee first".into(); return; }
+            None => {
+                settings.status = "Select a bubble with Rectangular Marquee first".into();
+                return;
+            }
         };
         let size = u64::from(rect.width()) * u64::from(rect.height());
         if rect.is_empty() || size > MAX_PIXELS {
@@ -143,10 +162,10 @@ mod native {
         settings.status = "Recognizing offline… Initial model download can take time (~400 MB).".into();
         std::thread::spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let image = photocraft_compose::render(&source, rect)
-                    .over_background([1.0, 1.0, 1.0]).to_rgba8();
+                let image = photocraft_compose::render(&source, rect).over_background([1.0, 1.0, 1.0]).to_rgba8();
                 recognize(&python, rect.width(), rect.height(), &image.pixels)
-            })).unwrap_or_else(|_| Err("Local OCR crashed while processing the selection".into()));
+            }))
+            .unwrap_or_else(|_| Err("Local OCR crashed while processing the selection".into()));
             if let Ok(mut status) = job().lock() {
                 status.running = false;
                 status.result = Some((id, xywh, result));
@@ -157,7 +176,9 @@ mod native {
 
     pub(super) fn poll(settings: &mut Settings) -> bool {
         let Ok(mut status) = job().lock() else { return false };
-        if status.running { return true; }
+        if status.running {
+            return true;
+        }
         if let Some((id, box_xywh, result)) = status.result.take() {
             match result {
                 Ok(text) => {
@@ -167,7 +188,9 @@ mod native {
                     settings.doc_id = id;
                     settings.status = "OCR finished. Review Japanese, then enter/edit the translation.".into();
                 }
-                Err(error) => { settings.status = error; }
+                Err(error) => {
+                    settings.status = error;
+                }
             }
         }
         false
@@ -210,13 +233,12 @@ pub fn panel(app: &mut PhotocraftApp, s: &mut Settings, ui: &mut egui::Ui) {
         });
         ui.checkbox(&mut s.auto_bake, "Also create baked raster copy on Apply");
         ui.weak("Editable and baked versions are separate and never shown simultaneously.");
-        if ui.add_enabled(!s.translated.trim().is_empty() && s.doc_id != 0,
-            egui::Button::new("Apply Editable Overlay")).clicked() {
+        if ui.add_enabled(!s.translated.trim().is_empty() && s.doc_id != 0, egui::Button::new("Apply Editable Overlay")).clicked() {
             let same_document = app.session.active().is_some_and(|doc| doc.doc.id.0 == s.doc_id);
             if !same_document {
                 s.status = "The document changed since OCR. Scan this document again.".into();
             } else {
-                let [x,y,w,h] = s.box_xywh;
+                let [x, y, w, h] = s.box_xywh;
                 let params = json!({
                     "text": s.translated,
                     "box": [x,y,w,h],
@@ -233,7 +255,9 @@ pub fn panel(app: &mut PhotocraftApp, s: &mut Settings, ui: &mut egui::Ui) {
                             }
                         }
                     }
-                    Err(e) => { s.status = format!("Could not create translation: {e}"); }
+                    Err(e) => {
+                        s.status = format!("Could not create translation: {e}");
+                    }
                 }
             }
         }

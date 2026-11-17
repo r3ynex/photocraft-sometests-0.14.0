@@ -279,11 +279,7 @@ impl eframe::App for PhotocraftApp {
         // tools resets the filter; it cannot lock the system pointer.
         #[cfg(target_os = "windows")]
         {
-            let mode = if self.ui.tool.is_brushlike() {
-                self.ui.tool_options.pen_mouse_mode
-            } else {
-                crate::pen_mouse_guard::Mode::Off
-            };
+            let mode = if self.ui.tool.is_brushlike() { self.ui.tool_options.pen_mouse_mode } else { crate::pen_mouse_guard::Mode::Off };
             if raw_input.focused {
                 self.pen_mouse_filter.filter(&mut raw_input.events, mode, raw_input.time.unwrap_or(0.0));
             } else {
