@@ -1,4 +1,5 @@
 name: REICA SkyTNT - rustfmt
+# Format shared portable AI model path code before building Windows artifacts.
 on:
   push:
     branches: [feature/reica-anime-seg-skytnt-20261117]
