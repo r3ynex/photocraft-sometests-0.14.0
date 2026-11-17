@@ -36,6 +36,8 @@ mod native {
         let lock = PROCESS.get_or_init(|| Mutex::new(None));
         let mut process = lock.lock().map_err(|_| "Anime ONNX process lock poisoned".to_owned())?;
         if process.as_ref().is_none_or(|p| p.python != python) {
+            // The model follows photocraft-reica.exe, never the Python interpreter.
+            let model_file = crate::reica_model_paths::prepare("skytnt")?.join("isnetis.onnx");
             let mut child = Command::new(python)
                 .arg("-u")
                 .arg("-c")
@@ -44,6 +46,7 @@ mod native {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::inherit())
                 .env("PYTHONIOENCODING", "utf-8")
+                .env("REICA_ANIME_SEG_MODEL", &model_file)
                 .spawn()
                 .map_err(|e| format!("Cannot launch Python ({python}): {e}"))?;
             let input = child.stdin.take().ok_or("No child stdin")?;
@@ -118,6 +121,14 @@ mod native {
 
     pub fn install(app: &mut PhotocraftApp, ui: &egui::Ui) {
         let python = app.ui.tool_options.anime_python.trim().to_owned();
+        let model_file = match crate::reica_model_paths::prepare("skytnt") {
+            Ok(dir) => dir.join("isnetis.onnx"),
+            Err(error) => {
+                app.ui.status = error;
+                app.ui.status_error = true;
+                return;
+            }
+        };
         let r = start_job(
             move || {
                 let result = Command::new(&python)
@@ -125,6 +136,7 @@ mod native {
                     .arg("-c")
                     .arg(SCRIPT)
                     .arg("--install")
+                    .env("REICA_ANIME_SEG_MODEL", model_file)
                     .output()
                     .map_err(|e| format!("Cannot launch Python ({python}): {e}"))
                     .and_then(|output| {
