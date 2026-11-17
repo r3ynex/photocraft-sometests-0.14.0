@@ -56,6 +56,8 @@ pub mod preset_files_ui;
 pub mod proxy;
 /// SkyTNT ONNX anime-character masks for Object Selection.
 pub mod reica_anime_select;
+/// Central storage folder for local models, relative to the PhotoCraft executable.
+pub(crate) mod reica_model_paths;
 /// Offline Japanese Manga OCR and translation overlays.
 pub mod reica_translate;
 pub mod render_path;
