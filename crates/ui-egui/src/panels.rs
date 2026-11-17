@@ -1670,6 +1670,24 @@ mod embedding_tests {
         assert!(crate::panel_docking::last_bodies(&h.ctx).iter().any(|(id, _)| id == "layers"), "the dock itself stays");
     }
 
+    #[test]
+    fn mangalab_rail_icon_opens_and_closes_the_shared_panel() {
+        let mut h = whole_app(true, true);
+        h.get_by_label("RE:ICA MangaLab").click();
+        h.run_steps(4);
+        assert!(
+            h.state().ui.docking.as_ref().is_some_and(|workspace| workspace.layout.contains(&"textLibrary".to_owned())),
+            "MangaLab rail icon should open the docked editor panel"
+        );
+
+        h.get_by_label("RE:ICA MangaLab").click();
+        h.run_steps(4);
+        assert!(
+            !h.state().ui.docking.as_ref().is_some_and(|workspace| workspace.layout.contains(&"textLibrary".to_owned())),
+            "a second click should close MangaLab without affecting the other docks"
+        );
+    }
+
     /// Settings saved before the flags existed load with both on.
     #[test]
     fn panels_without_the_flags_deserialize_with_both_on() {
