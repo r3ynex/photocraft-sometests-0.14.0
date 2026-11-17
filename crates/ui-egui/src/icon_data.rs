@@ -99,6 +99,8 @@ pub static ICONS: &[(&str, &[u8])] = &[
     // PhotoCraft originals: the Single Row / Single Column Marquee glyphs.
     ("marquee-column", include_bytes!("../../../assets/icons/marquee-column.svg")),
     ("marquee-row", include_bytes!("../../../assets/icons/marquee-row.svg")),
+    // Original RE:ICA manga-book glyph for the dock icon rail.
+    ("mangalab", include_bytes!("../../../assets/icons/mangalab.svg")),
     ("maximize-2", include_bytes!("../../../assets/icons/maximize-2.svg")),
     ("message-square", include_bytes!("../../../assets/icons/message-square.svg")),
     ("minus", include_bytes!("../../../assets/icons/minus.svg")),
