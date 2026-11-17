@@ -232,6 +232,29 @@ mod reveal_label_tests {
 }
 
 #[cfg(test)]
+mod reica_mangalab_panel_tests {
+    use super::*;
+
+    #[test]
+    fn mangalab_menu_is_live_and_opens_in_the_shared_dock() {
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let ctx = egui::Context::default();
+        let row = menu_items(&app).into_iter().find(|item| item.id == "window.panel.textLibrary").expect("MangaLab in Window menu");
+        assert!(is_live(&row.id), "MangaLab must be registered as a UI-level action");
+        assert!(row.enabled, "MangaLab must be available without a document");
+        assert!(crate::icons::exists("mangalab"), "the MangaLab rail icon must be embedded");
+
+        invoke(&mut app, &ctx, "window.panel.textLibrary", json!({"show": true})).expect("open MangaLab panel");
+        let opened = menu_items(&app).into_iter().find(|item| item.id == "window.panel.textLibrary").expect("MangaLab menu");
+        assert_eq!(opened.checked, Some(true), "the dock has a MangaLab tab");
+
+        invoke(&mut app, &ctx, "window.panel.textLibrary", json!({"show": false})).expect("close MangaLab panel");
+        let closed = menu_items(&app).into_iter().find(|item| item.id == "window.panel.textLibrary").expect("MangaLab menu");
+        assert_eq!(closed.checked, Some(false), "the MangaLab tab is closed");
+    }
+}
+
+#[cfg(test)]
 mod window_documents_tests {
     use super::*;
     use serde_json::json;

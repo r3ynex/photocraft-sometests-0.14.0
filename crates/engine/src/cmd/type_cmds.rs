@@ -333,12 +333,9 @@ fn apply_char_values(s: &mut CharStyle, p: &Value) -> bool {
     }
     // Freeform offsets are absolute text-space pixels, not font metrics. Keeping
     // these in the character runs means UTF-8 edits shift them with their glyphs.
-    for (key, field) in [
-        ("freeformX", &mut s.freeform_x),
-        ("freeformY", &mut s.freeform_y),
-        ("freeformAngle", &mut s.freeform_angle),
-        ("freeformScale", &mut s.freeform_scale),
-    ] {
+    for (key, field) in
+        [("freeformX", &mut s.freeform_x), ("freeformY", &mut s.freeform_y), ("freeformAngle", &mut s.freeform_angle), ("freeformScale", &mut s.freeform_scale)]
+    {
         if let Some(v) = f32p(p, key).filter(|v| v.is_finite()) {
             *field = match key {
                 "freeformX" | "freeformY" => v.clamp(-100_000.0, 100_000.0),
@@ -658,11 +655,7 @@ pub fn replace_text(t: &mut TextLayer, a: usize, b: usize, new: &str) {
     // dragged/turned/scaled position. A replacement keeps the transform of its
     // first overwritten character; any extra replacement characters are new.
     // Byte ranges (not code-point counts) keep Cyrillic and emoji aligned.
-    let freeform_reset_start = if b > a {
-        a + new.chars().next().map_or(0, char::len_utf8)
-    } else {
-        a
-    };
+    let freeform_reset_start = if b > a { a + new.chars().next().map_or(0, char::len_utf8) } else { a };
     if freeform_reset_start < a + new.len() {
         style_range(t, freeform_reset_start, a + new.len(), &|st| {
             st.freeform_x = 0.0;

@@ -31,6 +31,7 @@ pub fn is_live(id: &str) -> bool {
         || crate::analysis_ui::handles(id)
         || crate::workspace_ui::handles(id)
         || crate::preset_panels::handles(id)
+        || crate::text_library::handles(id)
         || crate::type_panels_ui::handles(id)
         || crate::timeline_ui::handles(id)
 }

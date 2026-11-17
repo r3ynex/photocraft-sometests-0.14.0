@@ -34,6 +34,10 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
     if crate::analysis_ui::handles(id) {
         return true;
     }
+    // RE:ICA MangaLab is a native dock panel, usable even without an open document.
+    if crate::text_library::handles(id) {
+        return true;
+    }
     if crate::preset_panels::handles(id) || crate::type_panels_ui::handles(id) || crate::timeline_ui::handles(id) {
         return true;
     }

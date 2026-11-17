@@ -1659,13 +1659,33 @@ mod embedding_tests {
 
         let h = whole_app(true, true);
         assert!(rail_drawn(&h) && drawn(&h, "title_bar"));
+        assert!(h.query_by_label("RE:ICA MangaLab").is_some(), "the manga panel has a rail shortcut");
         assert!(h.query_by_label("File").is_some());
 
         let h = whole_app(false, false);
         assert!(!rail_drawn(&h), "the icon rail is drawn");
+        assert!(h.query_by_label("RE:ICA MangaLab").is_none(), "the rail shortcut follows the rail visibility setting");
         assert!(!drawn(&h, "title_bar"), "the title bar is drawn");
         assert!(h.query_by_label("File").is_none(), "the menus are drawn");
         assert!(crate::panel_docking::last_bodies(&h.ctx).iter().any(|(id, _)| id == "layers"), "the dock itself stays");
+    }
+
+    #[test]
+    fn mangalab_rail_icon_opens_and_closes_the_shared_panel() {
+        let mut h = whole_app(true, true);
+        h.get_by_label("RE:ICA MangaLab").click();
+        h.run_steps(4);
+        assert!(
+            h.state().ui.docking.as_ref().is_some_and(|workspace| workspace.layout.contains(&"textLibrary".to_owned())),
+            "MangaLab rail icon should open the docked editor panel"
+        );
+
+        h.get_by_label("RE:ICA MangaLab").click();
+        h.run_steps(4);
+        assert!(
+            !h.state().ui.docking.as_ref().is_some_and(|workspace| workspace.layout.contains(&"textLibrary".to_owned())),
+            "a second click should close MangaLab without affecting the other docks"
+        );
     }
 
     /// Settings saved before the flags existed load with both on.

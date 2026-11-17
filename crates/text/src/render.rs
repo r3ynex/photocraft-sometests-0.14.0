@@ -213,11 +213,7 @@ fn draw(layout: &TextLayout, transform: &Xform, sink: &mut impl LineSink, only: 
             let cy = f64::from(g.y) - f64::from(face.size_px) * 0.4;
             let (sin, cos) = f64::from(angle).to_radians().sin_cos();
             let (a, b) = (cos * f64::from(scale), sin * f64::from(scale));
-            let transform = Xform([
-                a, b, -b, a,
-                cx - a * cx + b * cy + f64::from(st.freeform_x),
-                cy - b * cx - a * cy + f64::from(st.freeform_y),
-            ]);
+            let transform = Xform([a, b, -b, a, cx - a * cx + b * cy + f64::from(st.freeform_x), cy - b * cx - a * cy + f64::from(st.freeform_y)]);
             glyph = transform.mul(&glyph);
         }
         // Type on a path moves each glyph rigidly: turned to the curve at its centre.

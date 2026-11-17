@@ -1,0 +1,33 @@
+name: REICA Translate - format Rust sources
+# Includes the MangaLab Window menu registration and right-side dock button.
+# Also formats the MangaLab rail interaction regression test.
+on:
+  push:
+    branches: [feature/reica-mangalab-translate-stable-20261116]
+    paths: [".github/workflows/reica-translate-rustfmt.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format REICA source with repo-wide rustfmt settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "REICA Rustfmt"
+          git config user.email "actions@users.noreply.github.com"
+          cargo fmt --all
+          git status --short
+          git add -u -- '*.rs'
+          if ! git diff --cached --quiet; then
+            git commit -m "style(reica): apply required rustfmt to integrated REICA sources"
+            git push origin HEAD:refs/heads/feature/reica-mangalab-translate-stable-20261116
+          fi

@@ -107,6 +107,8 @@ mod layer_references;
 pub mod layer_xmp_cmds;
 pub mod lens_cmds;
 pub mod magnetic_cmds;
+/// RE:ICA manga page grouping.
+pub mod manga_pages_cmds;
 pub mod mask_view_cmds;
 pub(super) mod migrate_cmds;
 pub mod mode_cmds;
@@ -126,6 +128,8 @@ pub mod preset_import_cmds;
 pub mod print_cmds;
 pub mod rasterize_style_cmds;
 pub mod redeye_cmds;
+/// RE:ICA OCR translation and bake commands.
+pub mod reica_translate_cmds;
 pub mod render_cmds;
 pub mod retouch_cmds;
 pub mod sample_cmds;
@@ -1350,6 +1354,8 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::type_caret_cmds::specs());
     v.extend(crate::smart_cmds::specs());
     v.extend(crate::layer_multi_cmds::specs());
+    v.extend(manga_pages_cmds::specs());
+    v.extend(reica_translate_cmds::specs());
     v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::updates_cmds::specs());

@@ -8,6 +8,7 @@ on:
       - feature/freeform-text-20261106
       - feature/reica-mangalab-20261106
       - feature/reica-mangalab-upstream-20261106
+      - feature/reica-mangalab-translate-stable-20261116
   workflow_dispatch:
 
 permissions:
@@ -40,6 +41,17 @@ jobs:
       - name: Check UI Rust code
         shell: pwsh
         run: cargo check --locked -p photocraft-ui-egui
+
+      - name: Test REICA MangaLab Window menu and right dock shortcut
+        shell: pwsh
+        run: |
+          cargo test --locked -p photocraft-ui-egui reica_mangalab_panel_tests --lib
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --locked -p photocraft-ui-egui embedding_tests --lib
+
+      - name: Test REICA Pages and translation overlays
+        shell: pwsh
+        run: cargo test --locked -p photocraft-engine reica_translate_cmds --lib; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo test --locked -p photocraft-engine manga_pages_cmds --lib
 
       - name: Test editable freeform text
         shell: pwsh
