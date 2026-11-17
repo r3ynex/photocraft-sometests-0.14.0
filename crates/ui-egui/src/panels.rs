@@ -1659,10 +1659,12 @@ mod embedding_tests {
 
         let h = whole_app(true, true);
         assert!(rail_drawn(&h) && drawn(&h, "title_bar"));
+        assert!(h.query_by_label("RE:ICA MangaLab").is_some(), "the manga panel has a rail shortcut");
         assert!(h.query_by_label("File").is_some());
 
         let h = whole_app(false, false);
         assert!(!rail_drawn(&h), "the icon rail is drawn");
+        assert!(h.query_by_label("RE:ICA MangaLab").is_none(), "the rail shortcut follows the rail visibility setting");
         assert!(!drawn(&h, "title_bar"), "the title bar is drawn");
         assert!(h.query_by_label("File").is_none(), "the menus are drawn");
         assert!(crate::panel_docking::last_bodies(&h.ctx).iter().any(|(id, _)| id == "layers"), "the dock itself stays");
