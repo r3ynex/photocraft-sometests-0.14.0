@@ -274,8 +274,12 @@ pub struct ToolOptions {
     pub art_history_tolerance: f32,
 }
 
-fn default_anime_python() -> String { "python".into() }
-fn default_anime_threshold() -> f32 { 0.5 }
+fn default_anime_python() -> String {
+    "python".into()
+}
+fn default_anime_threshold() -> f32 {
+    0.5
+}
 
 fn default_art_history_style() -> String {
     "tightMedium".into()

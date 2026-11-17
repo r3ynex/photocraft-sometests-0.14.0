@@ -6,7 +6,7 @@ use std::io::Read;
 use base64::Engine as _;
 use flate2::read::ZlibDecoder;
 use photocraft_algo::selection::{self as selection, SelectionMode};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
 use crate::{EngineError, Result, Session};
@@ -27,9 +27,7 @@ fn decode_mask(encoded: &str, expected: usize) -> Result<Vec<u8>> {
     if encoded.len() > 24_000_000 {
         return Err(invalid("mask payload exceeds 24 MiB"));
     }
-    let compressed = base64::engine::general_purpose::STANDARD
-        .decode(encoded)
-        .map_err(|_| invalid("invalid base64 mask"))?;
+    let compressed = base64::engine::general_purpose::STANDARD.decode(encoded).map_err(|_| invalid("invalid base64 mask"))?;
     let mut decoder = ZlibDecoder::new(compressed.as_slice()).take((expected + 1) as u64);
     let mut result = Vec::with_capacity(expected);
     decoder.read_to_end(&mut result).map_err(|_| invalid("invalid zlib mask"))?;
@@ -40,16 +38,11 @@ fn decode_mask(encoded: &str, expected: usize) -> Result<Vec<u8>> {
 }
 
 fn apply(s: &mut Session, params: &Value) -> Result<Value> {
-    let id = params.get("docId").and_then(Value::as_u64)
-        .ok_or_else(|| invalid("missing source document ID"))?;
-    let w = params.get("width").and_then(Value::as_u64)
-        .ok_or_else(|| invalid("missing mask width"))?;
-    let h = params.get("height").and_then(Value::as_u64)
-        .ok_or_else(|| invalid("missing mask height"))?;
-    let expected = w.checked_mul(h).filter(|n| *n <= MAX_PIXELS && *n > 0)
-        .ok_or_else(|| invalid("invalid mask dimensions"))?;
-    let encoded = params.get("mask").and_then(Value::as_str)
-        .ok_or_else(|| invalid("missing compressed mask"))?;
+    let id = params.get("docId").and_then(Value::as_u64).ok_or_else(|| invalid("missing source document ID"))?;
+    let w = params.get("width").and_then(Value::as_u64).ok_or_else(|| invalid("missing mask width"))?;
+    let h = params.get("height").and_then(Value::as_u64).ok_or_else(|| invalid("missing mask height"))?;
+    let expected = w.checked_mul(h).filter(|n| *n <= MAX_PIXELS && *n > 0).ok_or_else(|| invalid("invalid mask dimensions"))?;
+    let encoded = params.get("mask").and_then(Value::as_str).ok_or_else(|| invalid("missing compressed mask"))?;
     let current = s.active().ok_or(EngineError::NoDocument)?;
     let bounds = current.doc.bounds();
     if current.doc.id.0 != id || u64::from(bounds.width()) != w || u64::from(bounds.height()) != h {

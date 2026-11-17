@@ -54,10 +54,10 @@ pub mod os_window;
 pub mod panels;
 pub mod preset_files_ui;
 pub mod proxy;
-/// Offline Japanese Manga OCR and translation overlays.
-pub mod reica_translate;
 /// SkyTNT ONNX anime-character masks for Object Selection.
 pub mod reica_anime_select;
+/// Offline Japanese Manga OCR and translation overlays.
+pub mod reica_translate;
 pub mod render_path;
 pub mod screenshot;
 pub mod state;
