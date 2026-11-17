@@ -1,0 +1,28 @@
+name: REICA SkyTNT - rustfmt
+on:
+  push:
+    branches: [feature/reica-anime-seg-skytnt-20261117]
+    paths: [.github/workflows/reica-anime-fmt.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format MangaLab and Anime Selection code
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          git add -u -- '*.rs'
+          if ! git diff --cached --quiet; then
+            git config user.name "REICA Rustfmt"
+            git config user.email "actions@users.noreply.github.com"
+            git commit -m "style(reica): rustfmt SkyTNT anime selection implementation"
+            git push origin HEAD:refs/heads/feature/reica-anime-seg-skytnt-20261117
+          fi
