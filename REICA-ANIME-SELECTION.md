@@ -13,11 +13,11 @@ This is **one combined soft selection covering all detected anime characters**, 
 
    The optional GPU runtime package is not required. The beta uses ONNX Runtime's **CPUExecutionProvider** for widest compatibility.
 3. Open a canvas in RE:ICA PhotoCraft and choose **Object Selection**. The options bar now includes a Python path field, **Install SkyTNT**, a confidence slider, and **Select Anime Characters**.
-4. Click **Install SkyTNT** once. This explicitly downloads the 176 MB pinned `isnetis.onnx` model, verifies the SHA256, and stores it under `~/.cache/reica/anime-seg/isnetis.onnx`.
+4. Click **Install SkyTNT** once. This explicitly downloads the 176 MB pinned `isnetis.onnx` model, verifies the SHA256, and stores it under `models/skytnt/isnetis.onnx` next to `photocraft-reica.exe`.
 5. Click **Select Anime Characters**. The visible image composite is analyzed locally and its soft foreground mask becomes an ordinary PhotoCraft selection.
 6. Use the regular selection actions, **Select and Mask**, refine brushes, layer masks or copy-to-new-layer. Nothing is automatically cut out or deleted.
 
-If Python isn't on PATH, set its full executable path in the Object Selection options bar. You can also supply a predownloaded model with the environment variable `REICA_ANIME_SEG_MODEL` (SHA256 must match the pinned weights).
+If Python isn't on PATH, set its full executable path in the Object Selection options bar. To use a predownloaded model, copy the checksum-verified `isnetis.onnx` into `models/skytnt` next to the executable.
 
 ## Model provenance and security
 
@@ -27,7 +27,7 @@ If Python isn't on PATH, set its full executable path in the Object Selection op
 - Fixed revision: `a0a563c41338cbe0d23dfb4bfc3e243c518e5768`.
 - Required SHA256: `f15622d853e8260172812b657053460e20806f04b9e05147d49af7bed31a6e99`.
 
-The RE:ICA repository does **not** include the binary model. The only network transfer is an explicit user-initiated download of the model itself; **no images or PSD contents are uploaded**. Inference happens in a local Python child process without an HTTP listener.
+The RE:ICA repository does **not** include the binary model. Both SkyTNT and Manga OCR keep their models beside the executable; see [REICA-MODELS.md](REICA-MODELS.md). The only network transfer is an explicit user-initiated download of the model itself; **no images or PSD contents are uploaded**. Inference happens in a local Python child process without an HTTP listener.
 
 ## Implementation notes
 
