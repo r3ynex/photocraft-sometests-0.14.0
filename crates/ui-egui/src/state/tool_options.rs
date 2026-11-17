@@ -401,6 +401,8 @@ impl Default for ToolOptions {
             anti_alias: true,
             sample_all: SampleAllLayers::default(),
             object_finder: true,
+            anime_python: default_anime_python(),
+            anime_threshold: default_anime_threshold(),
             remove_new_layer: false,
             remove_after_each_stroke: true,
             feather: 0.0,
