@@ -24,8 +24,15 @@ MODEL_SIZE = 1024
 
 
 def model_path():
-    return Path(os.environ.get("REICA_ANIME_SEG_MODEL") or
-                (Path.home() / ".cache" / "reica" / "anime-seg" / "isnetis.onnx"))
+    # PhotoCraft sets the absolute path relative to photocraft-reica.exe.
+    explicit = os.environ.get("REICA_ANIME_SEG_MODEL")
+    if explicit:
+        return Path(explicit)
+    models = os.environ.get("REICA_MODELS_DIR")
+    if models:
+        return Path(models) / "skytnt" / "isnetis.onnx"
+    # Fallback only for launching this worker independently from PhotoCraft.
+    return Path.home() / ".cache" / "reica" / "anime-seg" / "isnetis.onnx"
 
 
 def emit(data):
@@ -59,6 +66,15 @@ def install():
 
     temp = target.with_suffix(".partial")
     try:
+        # Preserve existing downloads from the older home-cache location:
+        # verify before copying, never trust an unverified local file.
+        legacy = Path.home() / ".cache" / "reica" / "anime-seg" / "isnetis.onnx"
+        if legacy != target and legacy.is_file() and checked_sha(legacy):
+            import shutil
+            shutil.copyfile(legacy, temp)
+            temp.replace(target)
+            return {"installed": True, "path": str(target), "already": False, "migrated": True}
+
         h = hashlib.sha256()
         transferred = 0
         with urllib.request.urlopen(MODEL_URL, timeout=60) as response, temp.open("wb") as out:
