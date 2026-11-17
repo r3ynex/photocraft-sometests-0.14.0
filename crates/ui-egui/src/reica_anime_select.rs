@@ -90,10 +90,11 @@ mod native {
     }
 
     fn start_job(task: impl FnOnce() -> Outcome + Send + 'static, ctx: &egui::Context) -> Result<(), String> {
-        let mut state = state().lock().map_err(|_| "Anime selection state locked".to_owned())?;
-        if state.running { return Err("Anime segmentation or model download is already running".into()); }
-        state.running = true;
-        state.finished = None;
+        let mut guard = state().lock().map_err(|_| "Anime selection state locked".to_owned())?;
+        if guard.running { return Err("Anime segmentation or model download is already running".into()); }
+        guard.running = true;
+        guard.finished = None;
+        drop(guard);
         let ctx = ctx.clone();
         std::thread::spawn(move || {
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(task))
