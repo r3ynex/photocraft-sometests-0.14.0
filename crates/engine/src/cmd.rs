@@ -1358,6 +1358,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::layer_multi_cmds::specs());
     v.extend(manga_pages_cmds::specs());
     v.extend(reica_translate_cmds::specs());
+    v.extend(reica_anime_select_cmds::specs());
     v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::updates_cmds::specs());
