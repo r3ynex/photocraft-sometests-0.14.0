@@ -7,16 +7,14 @@ use std::path::{Path, PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
 fn next_to_executable(executable: &Path) -> Result<PathBuf, String> {
-    let parent = executable.parent().filter(|p| !p.as_os_str().is_empty())
-        .ok_or_else(|| "Could not resolve PhotoCraft executable folder".to_owned())?;
+    let parent = executable.parent().filter(|p| !p.as_os_str().is_empty()).ok_or_else(|| "Could not resolve PhotoCraft executable folder".to_owned())?;
     Ok(parent.join("models"))
 }
 
 /// Resolve the portable models folder. Calling this does not download or install anything.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn root() -> Result<PathBuf, String> {
-    let executable = std::env::current_exe()
-        .map_err(|err| format!("Cannot locate PhotoCraft executable: {err}"))?;
+    let executable = std::env::current_exe().map_err(|err| format!("Cannot locate PhotoCraft executable: {err}"))?;
     next_to_executable(&executable)
 }
 
@@ -28,11 +26,9 @@ pub(crate) fn prepare(name: &str) -> Result<PathBuf, String> {
         return Err("Unknown RE:ICA model subdirectory".into());
     }
     let path = root()?.join(name);
-    std::fs::create_dir_all(&path)
-        .map_err(|err| format!(
-            "Cannot write models next to PhotoCraft: {} ({err}). Move the portable app to a writable folder outside Program Files.",
-            path.display()
-        ))?;
+    std::fs::create_dir_all(&path).map_err(|err| {
+        format!("Cannot write models next to PhotoCraft: {} ({err}). Move the portable app to a writable folder outside Program Files.", path.display())
+    })?;
     Ok(path)
 }
 
