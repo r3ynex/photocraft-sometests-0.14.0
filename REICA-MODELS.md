@@ -52,3 +52,16 @@ another user-owned directory.
 The model download is the only network transfer performed by these helpers;
 no open editor image is uploaded. The model installer validates the SkyTNT
 checksum before loading it.
+
+
+## Multiple installations and upgrades
+
+- The folder is resolved from the **actual running executable**, so launching
+  PhotoCraft from another working directory does not change model locations.
+- Two separate copies of PhotoCraft in different directories have independent
+  model folders; copy the `models` directory between them if desired.
+- When updating the portable EXE, replace only the program files and **leave
+  `models` intact**. Never extract an update by deleting the entire old
+  directory unless you've backed up `models`.
+- Models are not included in the downloadable ZIP. The ZIP contains empty
+  model folders plus this README so the target location is obvious.
