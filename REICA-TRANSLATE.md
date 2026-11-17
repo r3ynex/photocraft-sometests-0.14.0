@@ -51,6 +51,10 @@ PhotoCraft renders the selected crop at its original resolution (with a 9-millio
 
 Manga OCR's actual Python API is `from manga_ocr import MangaOcr; mocr = MangaOcr(); text = mocr(PIL_image)`. The worker does not pretend the OCR model detects bounding boxes; PhotoCraft already knows the selected crop rectangle. The process is started lazily, on user request, with a background Rust worker so it doesn't freeze the UI while the model loads.
 
+## Model storage (portable)
+
+The Manga OCR Hugging Face model/cache now lives under `models/manga-ocr/huggingface` next to `photocraft-reica.exe`, not in the user profile. Related Torch/XDG caches are redirected to the same `models/manga-ocr` folder. You can move the entire PhotoCraft directory to another computer without re-downloading the model (provided Python and its packages are installed there). See [REICA-MODELS.md](REICA-MODELS.md).
+
 ## Known limitations
 
 - The first version requires a **manually selected region**. Automatic detection of every speech balloon/text region across the page is **not shipped yet**; an optional local text detector can be added later.
