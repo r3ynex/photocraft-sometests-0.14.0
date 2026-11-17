@@ -9,6 +9,7 @@ on:
       - feature/reica-mangalab-20261106
       - feature/reica-mangalab-upstream-20261106
       - feature/reica-mangalab-translate-stable-20261116
+      - feature/reica-anime-seg-skytnt-20261117
   workflow_dispatch:
 
 permissions:
@@ -48,6 +49,14 @@ jobs:
           cargo test --locked -p photocraft-ui-egui reica_mangalab_panel_tests --lib
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --locked -p photocraft-ui-egui embedding_tests --lib
+
+      - name: Test portable REICA models directory
+        shell: pwsh
+        run: cargo test --locked -p photocraft-ui-egui reica_model_paths --lib
+
+      - name: Test SkyTNT soft-mask import
+        shell: pwsh
+        run: cargo test --locked -p photocraft-engine reica_anime_select_cmds --lib
 
       - name: Test REICA Pages and translation overlays
         shell: pwsh
@@ -95,6 +104,12 @@ jobs:
           '@ | Set-Content -Encoding UTF8 'dist/REICA-MangaLab/README.txt'
           if (Test-Path -LiteralPath 'LICENSE-MIT') { Copy-Item LICENSE-MIT 'dist/REICA-MangaLab/' }
           if (Test-Path -LiteralPath 'LICENSE-APACHE') { Copy-Item LICENSE-APACHE 'dist/REICA-MangaLab/' }
+          # Model files are deliberately NOT bundled. The portable folder is present from the first launch.
+          New-Item -ItemType Directory -Force -Path 'dist/REICA-MangaLab/models/skytnt' | Out-Null
+          New-Item -ItemType Directory -Force -Path 'dist/REICA-MangaLab/models/manga-ocr' | Out-Null
+          Copy-Item -LiteralPath 'REICA-MODELS.md' -Destination 'dist/REICA-MangaLab/models/README.md'
+          'SkyTNT ONNX weights (isnetis.onnx) will be saved here on Install SkyTNT.' | Set-Content -Encoding UTF8 'dist/REICA-MangaLab/models/skytnt/README.txt'
+          'Manga OCR Hugging Face / Torch caches will be saved here on first recognition.' | Set-Content -Encoding UTF8 'dist/REICA-MangaLab/models/manga-ocr/README.txt'
           Compress-Archive -Path 'dist/REICA-MangaLab' -DestinationPath 'dist/REICA-MangaLab-win64.zip' -Force
           Get-Item 'dist/REICA-MangaLab-win64.zip' | Select-Object Name,Length
 

@@ -731,6 +731,9 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
                 let r = app.run("select.subject", json!({}));
                 report_smart_result(app, r, tl!("No subject found — try a rectangle around the object"));
             }
+            crate::widgets::vline(ui, 22.0);
+            // RE:ICA: all anime characters become ONE standard soft selection.
+            crate::reica_anime_select::controls(app, ui);
         }
         Tool::RedEye => {
             opt(ui, tl!("Pupil Size"));

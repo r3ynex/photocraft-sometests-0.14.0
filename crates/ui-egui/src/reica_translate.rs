@@ -56,6 +56,11 @@ mod native {
     static WORKER: OnceLock<Mutex<Option<Worker>>> = OnceLock::new();
 
     fn new_worker(python: &str) -> Result<Worker, String> {
+        // Hugging Face (Transformers) normally caches under the user's home folder.
+        // Redirect its entire model cache to models/manga-ocr next to this .exe.
+        // Set these variables on the Python child BEFORE importing manga_ocr.
+        let local = crate::reica_model_paths::prepare("manga-ocr")?;
+        let hf = local.join("huggingface");
         let mut child = Command::new(python)
             .arg("-u")
             .arg("-c")
@@ -64,6 +69,11 @@ mod native {
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .env("PYTHONIOENCODING", "utf-8")
+            .env("HF_HOME", &hf)
+            .env("HF_HUB_CACHE", hf.join("hub"))
+            .env("HUGGINGFACE_HUB_CACHE", hf.join("hub"))
+            .env("TORCH_HOME", local.join("torch"))
+            .env("XDG_CACHE_HOME", local.join("cache"))
             .spawn()
             .map_err(|e| format!("Cannot launch Python ({python}): {e}"))?;
         let stdin = child.stdin.take().ok_or("Python stdin unavailable")?;

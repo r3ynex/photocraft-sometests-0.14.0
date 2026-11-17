@@ -128,6 +128,8 @@ pub mod preset_import_cmds;
 pub mod print_cmds;
 pub mod rasterize_style_cmds;
 pub mod redeye_cmds;
+/// Soft character selection from the optional local SkyTNT segmentation model.
+pub mod reica_anime_select_cmds;
 /// RE:ICA OCR translation and bake commands.
 pub mod reica_translate_cmds;
 pub mod render_cmds;
@@ -1356,6 +1358,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::layer_multi_cmds::specs());
     v.extend(manga_pages_cmds::specs());
     v.extend(reica_translate_cmds::specs());
+    v.extend(reica_anime_select_cmds::specs());
     v.extend(crate::layer_copy_cmds::specs());
     v.extend(crate::prefs::specs());
     v.extend(crate::updates_cmds::specs());

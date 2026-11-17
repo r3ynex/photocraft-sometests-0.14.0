@@ -13,6 +13,12 @@ pub struct ToolOptions {
     pub sample_all: SampleAllLayers,
     /// Object Selection › Object Finder: hovering highlights the object a click selects (#4087).
     pub object_finder: bool,
+    /// Local Python environment for optional SkyTNT ONNX Anime Character Selection.
+    #[serde(default = "default_anime_python")]
+    pub anime_python: String,
+    /// Soft foreground-mask threshold from SkyTNT's ISNet; 0.5 by default.
+    #[serde(default = "default_anime_threshold")]
+    pub anime_threshold: f32,
     /// Remove tool: the fill goes to a new layer above the target (Photoshop's Create a new layer).
     pub remove_new_layer: bool,
     /// Remove tool: each stroke is filled when released (Photoshop's default). Off, the strokes
@@ -268,6 +274,13 @@ pub struct ToolOptions {
     pub art_history_tolerance: f32,
 }
 
+fn default_anime_python() -> String {
+    "python".into()
+}
+fn default_anime_threshold() -> f32 {
+    0.5
+}
+
 fn default_art_history_style() -> String {
     "tightMedium".into()
 }
@@ -392,6 +405,8 @@ impl Default for ToolOptions {
             anti_alias: true,
             sample_all: SampleAllLayers::default(),
             object_finder: true,
+            anime_python: default_anime_python(),
+            anime_threshold: default_anime_threshold(),
             remove_new_layer: false,
             remove_after_each_stroke: true,
             feather: 0.0,

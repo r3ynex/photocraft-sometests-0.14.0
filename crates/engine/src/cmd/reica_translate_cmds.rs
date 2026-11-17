@@ -3,7 +3,6 @@
 use crate::commands::CommandSpec;
 use crate::{EngineError, Result, Session};
 use photocraft_doc::{Document, Layer, LayerContent, LayerId};
-use photocraft_geom::Rect;
 use photocraft_raster::{Surface, from_rgba};
 use serde_json::{Value, json};
 
@@ -54,7 +53,7 @@ fn apply(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let layer_id = s.edit("RE:ICA: Add Editable Translation", move |doc, active| {
         crate::type_cmds::refresh(doc, &mut t);
-        let mut text_layer = Layer::new("Translated text", LayerContent::Text(t));
+        let text_layer = Layer::new("Translated text", LayerContent::Text(t));
         let new_id = text_layer.id;
         if let Some(translation) = translation_group(doc, page) {
             // Undo remains one transaction, even when inserting into an existing group.
