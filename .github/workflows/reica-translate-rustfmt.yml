@@ -1,4 +1,5 @@
 name: REICA Translate - format Rust sources
+# Includes the MangaLab Window menu registration and right-side dock button.
 on:
   push:
     branches: [feature/reica-mangalab-translate-stable-20261116]
